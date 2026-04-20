@@ -21,10 +21,11 @@ When the Log exceeds ~150 lines, summarize or delete older entries. Promote anyt
 
 ## Current state
 
-- **Phase:** Base scaffold. No business logic shipped. No migrations yet. No real tests.
-- **Runnable:** Backend boots `/healthz`, frontend renders a placeholder page, extension can be sideloaded but has no backend endpoint to save to.
-- **In flight:** None — no feature worktrees created yet.
-- **Next logical slice:** backend `POST /links` + `GET /links` + Alembic initial migration (enables pgvector, creates `links` table), then frontend API client + list page, then extension wiring.
+- **Phase:** Stage 2 complete. Semantic search endpoint + frontend search UI shipped.
+- **Runnable:** Backend serves `/links` CRUD + `GET /links/search?q=` + `/healthz`. Frontend has Links tab (list/add/delete) and Search tab (debounced live search with match % scores). DB needs `docker compose -f docker-compose.dev.yml up -d` then `alembic upgrade head` (from `backend/`) before first use.
+- **Docs:** `HOW_IT_WORKS.md` added — conceptual design guide (why semantic search, ingest pipeline, embedding tradeoffs, async rationale, data flows).
+- **In flight:** None.
+- **Next logical slice:** Extension wiring (MV3 popup → POST `/links` to backend).
 
 ---
 
@@ -39,7 +40,7 @@ High-level "why" for choices that shape the codebase. Newest first. An ADR is st
 
 ### ADR-002 (2026-04-10): Pluggable embedding provider
 **Context:** We want to ship with a fake embedder (no model required) and swap to a local sentence-transformers model or OpenAI later without touching routers or services that use embeddings.
-**Decision:** `EmbeddingProvider` interface in `backend/app/services/embedding/` (TBD). Implementations: `StubProvider` (deterministic hash → vector, for tests and dev), `LocalProvider` (sentence-transformers), `OpenAIProvider` (`text-embedding-3-small`). Selection via `EMBEDDING_PROVIDER` env var.
+**Decision:** `EmbeddingProvider` interface in `backend/app/services/embedding/base.py`. Implementations: `StubProvider` (deterministic hash → unit-vector, shipped), `LocalProvider` (sentence-transformers, future), `OpenAIProvider` (`text-embedding-3-small`, future). Factory in `factory.py`. Selection via `EMBEDDING_PROVIDER` env var.
 **Consequences:** Embedding dimension (`EMBEDDING_DIM`) must match the provider; changing provider means a migration + re-embed. Routers and search services depend on the interface, not a concrete provider — never `import openai` outside the `openai` provider module.
 
 ### ADR-001 (2026-04-10): Async SQLAlchemy everywhere on the backend
@@ -52,6 +53,23 @@ High-level "why" for choices that shape the codebase. Newest first. An ADR is st
 ## Log
 
 Newest first. Each entry ≤10 lines. Older than ~2 weeks or no longer load-bearing: compact or delete. Promote anything that should outlive the Log into an ADR.
+
+### 2026-04-19 — UI polish + dark mode (frontend agent)
+Added `index.css` with CSS custom property token set (light + dark via `prefers-color-scheme`). Replaced all hardcoded hex colours across `App`, `LinksPage`, `SearchPage`, `AddLinkForm` with `var(--color-*)` references. Nav refactored to slim top-bar with underline tab indicator. Link/search rows gain hover highlight; delete button hidden until hover. Score badge is now an accent-tint pill. Focus rings via global CSS. No new deps; `tsc --noEmit` clean.
+
+### 2026-04-19 — QA: integration test suite (qa agent)
+14 tests in `backend/tests/test_links.py` + `conftest.py` covering full CRUD, URL validation, embedding persistence, and search (empty DB, score range, missing/empty `q`). All pass against real Postgres. `pytest.ini` added with `asyncio_mode=auto`. Infrastructure note: pytest-asyncio 0.24 requires all async fixtures to be function-scoped when asyncpg is involved — cross-scope loop mismatch; fixed via `asyncio_default_fixture_loop_scope=function`.
+
+### 2026-04-19 — Stage 2: semantic search (architect)
+Backend: `services/search.py` — embeds query via provider, cosine distance (`<=>`) pgvector query, returns ranked `(Link, score)` pairs. `GET /links/search?q=` endpoint added to links router **before** `/{link_id}` to avoid path collision. New schemas: `SearchResultItem` (LinkResponse + score float), `SearchResultsResponse`.
+Frontend: `api/search.ts` client, `SearchPage.tsx` (debounced 300ms live search, match % badge, loading/empty states), `App.tsx` updated with Links/Search tab nav.
+**Note:** Search ranks by cosine similarity against the StubProvider's hash-based embeddings — results will be semantically meaningful only once a real embedding provider is wired in.
+
+### 2026-04-17 — Stage 1: links CRUD + frontend (architect)
+Backend: `Link` ORM model, Pydantic schemas (`LinkCreate/Update/Response/Detail/List`), Alembic setup + migration `0001_initial` (enables `pgvector`, creates `links` table + `idx_links_created_at`), `StubProvider` embedding service, `ingest_link` service (URL normalization via `urllib.parse`), full CRUD router wired into `main.py`.
+Frontend: `src/api/links.ts` client (fetch wrapper), `AddLinkForm` component, `LinksPage` (list + paginate + delete), `App.tsx` updated.
+**Gotcha:** No Python package manager in the dev shell — Alembic files were written manually rather than via `alembic init` / `alembic revision`. Run `alembic upgrade head` from `backend/` inside a venv or Docker container where deps are installed.
+**Gotcha:** Subagents lacked Write/Bash permissions — architect implemented directly.
 
 ### 2026-04-10 — Project rebuilt from scratch (architect)
 Prior Linkyard session was lost to technical issues; rebuilt fresh in this directory. Created scaffold: backend (FastAPI skeleton, `main.py`/`config.py`/`db.py`, empty `models`/`schemas`/`routers`/`services` packages, `requirements.txt`, `.env.example`), frontend (React/Vite/TS skeleton with placeholder `App.tsx`), extension (MV3 skeleton with `background.js`/`content.js`/popup), `docker-compose.dev.yml` for Postgres 16 + pgvector, six agent configs under `.claude/agents/`, per-feature worktree tooling at `scripts/worktree.sh`, `docs/PARALLEL_AGENTS.md`, `docs/ARCHITECTURE.md`, `docs/API_SPEC.md`, `docs/DATA_MODEL.md`, and this journal.

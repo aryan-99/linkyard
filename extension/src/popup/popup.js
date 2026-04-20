@@ -1,11 +1,26 @@
-const btn = document.getElementById("save");
-const status = document.getElementById("status");
+const btn        = document.getElementById("save");
+const status     = document.getElementById("status");
+const pageTitle  = document.getElementById("page-title");
 
+// ── On load: show the active tab's title in the header area ──────────────────
+(async () => {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (tab?.title) {
+    pageTitle.textContent = tab.title;
+  }
+})();
+
+// ── Save button ──────────────────────────────────────────────────────────────
 btn.addEventListener("click", async () => {
-  status.textContent = "Saving...";
+  status.className = "saving";
+  status.textContent = "Saving\u2026";
+  btn.disabled = true;
+
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab?.id) {
+    status.className = "error";
     status.textContent = "No active tab.";
+    btn.disabled = false;
     return;
   }
 
@@ -22,6 +37,15 @@ btn.addEventListener("click", async () => {
   });
 
   chrome.runtime.sendMessage({ type: "SAVE_LINK", payload: result }, (resp) => {
-    status.textContent = resp?.ok ? "Saved" : `Failed (${resp?.status ?? resp?.error ?? "?"})`;
+    if (resp?.ok) {
+      btn.textContent = "Saved";
+      btn.disabled = true;
+      status.className = "";
+      status.textContent = "";
+    } else {
+      status.className = "error";
+      status.textContent = `Failed (${resp?.status ?? resp?.error ?? "?"})`;
+      btn.disabled = false;
+    }
   });
 });
