@@ -69,10 +69,20 @@
         gap: 10px;
       }
 
-      /* ── Page title ── */
+      /* ── Page info ── */
       #page-title {
         font-size: 12px;
+        font-weight: 600;
         color: var(--text-secondary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        min-height: 1.4em;
+      }
+
+      #page-url {
+        font-size: 11px;
+        color: var(--text-muted);
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -120,6 +130,7 @@
     </div>
     <div class="body">
       <p id="page-title"></p>
+      <p id="page-url"></p>
       <button id="save">Save this page</button>
       <div id="status"></div>
     </div>

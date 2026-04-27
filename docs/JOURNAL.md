@@ -21,11 +21,11 @@ When the Log exceeds ~150 lines, summarize or delete older entries. Promote anyt
 
 ## Current state
 
-- **Phase:** Stage 2 complete. Semantic search endpoint + frontend search UI shipped.
-- **Runnable:** Backend serves `/links` CRUD + `GET /links/search?q=` + `/healthz`. Frontend has Links tab (list/add/delete) and Search tab (debounced live search with match % scores). DB needs `docker compose -f docker-compose.dev.yml up -d` then `alembic upgrade head` (from `backend/`) before first use.
+- **Phase:** Stage 3 complete. MV3 extension popup wired to backend.
+- **Runnable:** Backend serves `/links` CRUD + `GET /links/search?q=` + `/healthz`. Frontend has Links tab (list/add/delete) and Search tab (debounced live search with match % scores). Extension popup saves current tab via POST `/links`. DB needs `docker compose -f docker-compose.dev.yml up -d` then `alembic upgrade head` (from `backend/`) before first use. Load extension via `chrome://extensions > Load unpacked > extension/`.
 - **Docs:** `HOW_IT_WORKS.md` added — conceptual design guide (why semantic search, ingest pipeline, embedding tradeoffs, async rationale, data flows).
 - **In flight:** None.
-- **Next logical slice:** Extension wiring (MV3 popup → POST `/links` to backend).
+- **Next logical slice:** Real embedding provider (LocalProvider via sentence-transformers, or OpenAIProvider) so search results are semantically meaningful. Or: extension options page to configure API base URL.
 
 ---
 
@@ -53,6 +53,10 @@ High-level "why" for choices that shape the codebase. Newest first. An ADR is st
 ## Log
 
 Newest first. Each entry ≤10 lines. Older than ~2 weeks or no longer load-bearing: compact or delete. Promote anything that should outlive the Log into an ADR.
+
+### 2026-04-27 — Extension wiring + security hardening (architect)
+MV3 popup implemented: popup.js reads tab.url/tab.title via `chrome.tabs.query`, displays both, sends `SAVE_LINK` to background.js which POSTs `{url, title, source:"extension"}` to `POST /links`. Swapped `scripting` permission for `tabs` — reduced permission footprint. Guards against non-http(s) schemes via positive allowlist. Backend: `allow_origin_regex` added to CORSMiddleware for `chrome-extension://[a-p]{32}` (tightened from `.*` during security review); configurable via `CORS_ORIGIN_REGEX` env var — pin to specific extension ID in prod. Security review: 2 medium findings fixed (popup scheme guard, CORS regex precision); no XSS surface (textContent only throughout popup).
+**Devops note:** Set `CORS_ORIGIN_REGEX=chrome-extension://<published-id>` in prod environment before go-live.
 
 ### 2026-04-19 — UI polish + dark mode (frontend agent)
 Added `index.css` with CSS custom property token set (light + dark via `prefers-color-scheme`). Replaced all hardcoded hex colours across `App`, `LinksPage`, `SearchPage`, `AddLinkForm` with `var(--color-*)` references. Nav refactored to slim top-bar with underline tab indicator. Link/search rows gain hover highlight; delete button hidden until hover. Score badge is now an accent-tint pill. Focus rings via global CSS. No new deps; `tsc --noEmit` clean.

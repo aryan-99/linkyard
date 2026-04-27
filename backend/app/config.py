@@ -17,6 +17,15 @@ class Settings(BaseSettings):
 
     cors_origins_raw: str = "http://localhost:5173"
 
+    # Regex applied in addition to cors_origins. In dev we allow any
+    # chrome-extension:// origin because the extension ID is generated and
+    # varies per browser/install. The pattern requires the extension ID to be
+    # exactly 32 lowercase a-p characters (Chrome's CRX ID format) so that the
+    # scheme prefix cannot be abused with arbitrary suffixes or other schemes.
+    # In production, scope this to a known ID via the env var, e.g.:
+    #   CORS_ORIGIN_REGEX=chrome-extension://abcdefghijklmnopabcdefghijklmnop
+    cors_origin_regex: str = r"chrome-extension://[a-p]{32}"
+
     @property
     def cors_origins(self) -> list[str]:
         return [o.strip() for o in self.cors_origins_raw.split(",") if o.strip()]

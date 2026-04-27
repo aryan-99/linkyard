@@ -5,6 +5,11 @@ async function getApiBase() {
   return apiBase;
 }
 
+// Sender origin check: chrome.runtime.onMessage only receives messages from
+// the same extension (popup, content scripts) — external websites cannot reach
+// this listener. No additional sender.id check is required for same-extension
+// messaging, but any future content-script → background path MUST validate
+// sender.tab.url before trusting tab-derived data.
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg?.type !== "SAVE_LINK") return;
   (async () => {

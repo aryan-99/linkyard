@@ -9,8 +9,13 @@ app = FastAPI(title="Linkyard", debug=settings.debug)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
+    # allow_origins=["*"] only covers http/https; chrome-extension:// origins
+    # require an explicit regex. In dev this permits any extension ID.
+    # In production, set CORS_ORIGIN_REGEX to a specific extension ID:
+    #   chrome-extension://abcdefghijklmnopabcdefghijklmnop
+    allow_origin_regex=settings.cors_origin_regex,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
