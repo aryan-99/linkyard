@@ -21,11 +21,11 @@ When the Log exceeds ~150 lines, summarize or delete older entries. Promote anyt
 
 ## Current state
 
-- **Phase:** Stage 3 complete. MV3 extension popup wired to backend.
-- **Runnable:** Backend serves `/links` CRUD + `GET /links/search?q=` + `/healthz`. Frontend has Links tab (list/add/delete) and Search tab (debounced live search with match % scores). Extension popup saves current tab via POST `/links`. DB needs `docker compose -f docker-compose.dev.yml up -d` then `alembic upgrade head` (from `backend/`) before first use. Load extension via `chrome://extensions > Load unpacked > extension/`.
-- **Docs:** `HOW_IT_WORKS.md` added — conceptual design guide (why semantic search, ingest pipeline, embedding tradeoffs, async rationale, data flows).
+- **Phase:** Stage 4 complete. Local semantic embeddings, settings API, extension options page.
+- **Runnable:** Backend serves `/links` CRUD + `GET /links/search?q=` + `GET/PUT /settings` + `POST /settings/reembed` + `/healthz`. Frontend has Links, Search, and Settings tabs. Extension popup saves current tab; gear icon opens options page to configure backend URL. DB needs `docker compose -f docker-compose.dev.yml up -d` then `alembic upgrade head` (from `backend/`) before first use. Load extension via `chrome://extensions > Load unpacked > extension/`. Run `pip install -r requirements.txt` to install `sentence-transformers` for local semantic search.
+- **Docs:** `HOW_IT_WORKS.md` added — conceptual design guide.
 - **In flight:** None.
-- **Next logical slice:** Extension options page to configure API base URL. Or: migrate vector column to 1536-dim + wire OpenAIProvider (pre-prod blockers: auth on settings, encrypt key at rest).
+- **Next logical slice:** Migrate vector column to 1536-dim + wire OpenAIProvider (pre-prod blockers: auth on settings endpoints, encrypt API key at rest). Or: extension options page already ships — consider extension QA.
 
 ---
 
@@ -53,6 +53,9 @@ High-level "why" for choices that shape the codebase. Newest first. An ADR is st
 ## Log
 
 Newest first. Each entry ≤10 lines. Older than ~2 weeks or no longer load-bearing: compact or delete. Promote anything that should outlive the Log into an ADR.
+
+### 2026-04-28 — Simplify pass (architect)
+Dedup: `request<T>` + `BASE` extracted to `frontend/src/api/client.ts`; `SessionDep` centralised in `deps.py`; `text_for_embedding()` extracted to `ingest.py` and shared with `settings.py`. Efficiency: reembed N+1 eliminated (single `select(Link)`), embed calls parallelised with `asyncio.gather`, `httpx.AsyncClient` moved to `OpenAIProvider.__init__`. Bug: `asyncio.get_event_loop()` → `get_running_loop()` (deprecated in 3.10+). Extension: `showStatus()` helper added to `popup.js`; URL protocol check in `options.js` collapsed into `new URL()` try/catch. 26 tests still passing.
 
 ### 2026-04-28 — Extension options page (extension agent)
 Added `src/options/options.html` + `options.js` for configuring backend API base URL via `chrome.storage.sync`. Gear button (⚙) in popup header opens options via `chrome.runtime.openOptionsPage()`. URL validated (must be http/https, trailing slash stripped). `host_permissions` expanded from `localhost:8000` only to all `localhost/*` and `127.0.0.1/*` ports (http + https) to support arbitrary local ports. `manifest.json` gains `options_ui` declaration. No new Chrome API permissions.
