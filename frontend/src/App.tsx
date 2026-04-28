@@ -1,8 +1,9 @@
 import { useState } from "react";
 import LinksPage from "./pages/LinksPage";
 import SearchPage from "./pages/SearchPage";
+import SettingsPage from "./pages/SettingsPage";
 
-type Tab = "links" | "search";
+type Tab = "links" | "search" | "settings";
 
 export default function App() {
   const [tab, setTab] = useState<Tab>("links");
@@ -66,9 +67,18 @@ export default function App() {
           >
             Search
           </button>
+          <button
+            onClick={() => setTab("settings")}
+            style={tabBtnStyle(tab === "settings")}
+            aria-current={tab === "settings" ? "page" : undefined}
+          >
+            Settings
+          </button>
         </div>
       </nav>
-      {tab === "links" ? <LinksPage /> : <SearchPage />}
+      {tab === "links" && <LinksPage />}
+      {tab === "search" && <SearchPage />}
+      {tab === "settings" && <SettingsPage />}
     </div>
   );
 }

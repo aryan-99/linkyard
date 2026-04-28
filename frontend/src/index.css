@@ -26,6 +26,7 @@ body {
   --color-error: #cc0000;
   --color-success: #16a34a;
   --color-hover-bg: #f0f4ff;
+  --color-btn-primary-text: #ffffff;
 }
 
 /* ─── Dark theme ────────────────────────────────────────────────────────────── */
@@ -42,6 +43,7 @@ body {
     --color-error: #f87171;
     --color-success: #4ade80;
     --color-hover-bg: #1e2533;
+    --color-btn-primary-text: #ffffff;
   }
 
   /* Smooth scrollbar in dark mode */
