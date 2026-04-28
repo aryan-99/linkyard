@@ -8,6 +8,7 @@ pydantic-settings==2.7.*
 httpx==0.28.*
 pgvector==0.3.*
 python-dotenv==1.0.*
+sentence-transformers==3.*
 
 # dev
 pytest==8.3.*

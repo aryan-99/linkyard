@@ -9,8 +9,10 @@ class Settings(BaseSettings):
 
     debug: bool = False
 
-    embedding_provider: str = "stub"
+    embedding_provider: str = "local"
     embedding_dim: int = 384
+
+    local_embedding_model: str = "all-MiniLM-L6-v2"
 
     openai_api_key: str | None = None
     openai_embedding_model: str = "text-embedding-3-small"
