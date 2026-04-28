@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.routers import links
+from app.routers import settings as settings_router
 
 app = FastAPI(title="Linkyard", debug=settings.debug)
 
@@ -26,3 +27,4 @@ async def healthz() -> dict[str, str]:
 
 
 app.include_router(links.router, prefix="/links", tags=["links"])
+app.include_router(settings_router.router, prefix="/settings", tags=["settings"])

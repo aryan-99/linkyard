@@ -2,16 +2,16 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.link import Link
-from app.services.embedding import get_embedding_provider
+from app.services.embedding.base import EmbeddingProvider
 
 
 async def search_links(
     session: AsyncSession,
     query: str,
+    provider: EmbeddingProvider,
     limit: int = 20,
     offset: int = 0,
 ) -> tuple[list[tuple[Link, float]], int]:
-    provider = get_embedding_provider()
     query_embedding = await provider.embed(query)
 
     distance = Link.embedding.cosine_distance(query_embedding)

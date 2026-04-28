@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.link import Link
 from app.schemas.link import LinkCreate
-from app.services.embedding import get_embedding_provider
+from app.services.embedding.base import EmbeddingProvider
 
 
 def _normalize_url(url: str) -> str:
@@ -17,13 +17,14 @@ def _normalize_url(url: str) -> str:
     return urlunparse(normalized)
 
 
-async def ingest_link(session: AsyncSession, data: LinkCreate) -> Link:
+async def ingest_link(
+    session: AsyncSession, data: LinkCreate, provider: EmbeddingProvider
+) -> Link:
     url = _normalize_url(data.url)
 
     text_for_embedding = " ".join(
         filter(None, [data.title, data.snippet, url])
     )
-    provider = get_embedding_provider()
     embedding = await provider.embed(text_for_embedding)
 
     link = Link(

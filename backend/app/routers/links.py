@@ -6,6 +6,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_session
+from app.deps import ProviderDep
 from app.models.link import Link
 from app.schemas.link import (
     LinkCreate,
@@ -25,8 +26,10 @@ SessionDep = Annotated[AsyncSession, Depends(get_session)]
 
 
 @router.post("", response_model=LinkDetailResponse, status_code=201)
-async def create_link(data: LinkCreate, session: SessionDep) -> LinkDetailResponse:
-    link = await ingest_link(session, data)
+async def create_link(
+    data: LinkCreate, session: SessionDep, provider: ProviderDep
+) -> LinkDetailResponse:
+    link = await ingest_link(session, data, provider)
     await session.commit()
     await session.refresh(link)
     return LinkDetailResponse.model_validate(link)
@@ -55,11 +58,12 @@ async def list_links(
 @router.get("/search", response_model=SearchResultsResponse)
 async def search_links_endpoint(
     session: SessionDep,
+    provider: ProviderDep,
     q: str = Query(..., min_length=1),
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
 ) -> SearchResultsResponse:
-    results, total = await search_links(session, q, limit, offset)
+    results, total = await search_links(session, q, provider, limit, offset)
     return SearchResultsResponse(
         items=[
             SearchResultItem(**LinkResponse.model_validate(link).model_dump(), score=score)
