@@ -7,6 +7,10 @@ from app.schemas.link import LinkCreate
 from app.services.embedding.base import EmbeddingProvider
 
 
+def text_for_embedding(title: str | None, snippet: str | None, url: str) -> str:
+    return " ".join(filter(None, [title, snippet, url]))
+
+
 def _normalize_url(url: str) -> str:
     parsed = urlparse(url)
     normalized = parsed._replace(
@@ -22,10 +26,7 @@ async def ingest_link(
 ) -> Link:
     url = _normalize_url(data.url)
 
-    text_for_embedding = " ".join(
-        filter(None, [data.title, data.snippet, url])
-    )
-    embedding = await provider.embed(text_for_embedding)
+    embedding = await provider.embed(text_for_embedding(data.title, data.snippet, url))
 
     link = Link(
         url=url,

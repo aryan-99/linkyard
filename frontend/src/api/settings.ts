@@ -1,4 +1,4 @@
-const BASE = "http://localhost:8000";
+import { request } from "./client";
 
 export interface AppSettings {
   embedding_provider: string;
@@ -8,19 +8,6 @@ export interface AppSettings {
 export interface SettingsUpdate {
   embedding_provider?: string;
   openai_api_key?: string | null;
-}
-
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    headers: { "Content-Type": "application/json" },
-    ...init,
-  });
-  if (!res.ok) {
-    const detail = await res.text().catch(() => res.statusText);
-    throw new Error(`${res.status}: ${detail}`);
-  }
-  if (res.status === 204) return undefined as T;
-  return res.json() as Promise<T>;
 }
 
 export function getSettings(): Promise<AppSettings> {

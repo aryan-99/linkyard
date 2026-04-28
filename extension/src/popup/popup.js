@@ -4,7 +4,11 @@ const pageTitle  = document.getElementById("page-title");
 const pageUrl    = document.getElementById("page-url");
 const optionsBtn = document.getElementById("options-btn");
 
-// ── Options gear button ───────────────────────────────────────────────────────
+function showStatus(type, message) {
+  status.className = type;
+  status.textContent = message;
+}
+
 optionsBtn.addEventListener("click", () => {
   chrome.runtime.openOptionsPage();
 });
@@ -30,22 +34,19 @@ let currentTab = null;
   const isSaveable = url.startsWith("http://") || url.startsWith("https://");
   if (!isSaveable) {
     btn.disabled = true;
-    status.className = "error";
-    status.textContent = "Cannot save browser internal pages.";
+    showStatus("error", "Cannot save browser internal pages.");
   }
 })();
 
 // ── Save button ───────────────────────────────────────────────────────────────
 btn.addEventListener("click", async () => {
   if (!currentTab) {
-    status.className = "error";
-    status.textContent = "No active tab found.";
+    showStatus("error", "No active tab found.");
     return;
   }
 
   btn.disabled = true;
-  status.className = "saving";
-  status.textContent = "Saving\u2026";
+  showStatus("saving", "Saving\u2026");
 
   const payload = {
     url: currentTab.url,
@@ -57,8 +58,7 @@ btn.addEventListener("click", async () => {
   // API base URL stored in chrome.storage.sync.
   chrome.runtime.sendMessage({ type: "SAVE_LINK", payload }, (resp) => {
     if (chrome.runtime.lastError) {
-      status.className = "error";
-      status.textContent = "Extension error: " + chrome.runtime.lastError.message;
+      showStatus("error", "Extension error: " + chrome.runtime.lastError.message);
       btn.disabled = false;
       return;
     }
@@ -66,11 +66,9 @@ btn.addEventListener("click", async () => {
     if (resp?.ok) {
       btn.textContent = "Saved";
       btn.disabled = true;
-      status.className = "success";
-      status.textContent = "Saved!";
+      showStatus("success", "Saved!");
     } else {
-      status.className = "error";
-      status.textContent = "Failed: " + (resp?.status ?? resp?.error ?? "unknown error");
+      showStatus("error", "Failed: " + (resp?.status ?? resp?.error ?? "unknown error"));
       btn.disabled = false;
     }
   });

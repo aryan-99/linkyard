@@ -1,21 +1,17 @@
+import asyncio
 import logging
-from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
-logger = logging.getLogger(__name__)
-
-from app.db import get_session
-from app.deps import ProviderDep
+from app.deps import ProviderDep, SessionDep
 from app.models.app_settings import AppSettings
 from app.models.link import Link
 from app.schemas.settings import SettingsResponse, SettingsUpdate
+from app.services.ingest import text_for_embedding
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
-
-SessionDep = Annotated[AsyncSession, Depends(get_session)]
 
 
 def _row_to_response(row: AppSettings) -> SettingsResponse:
@@ -42,8 +38,7 @@ async def update_settings(
     result = await session.execute(select(AppSettings).where(AppSettings.id == 1))
     row = result.scalar_one_or_none()
     if row is None:
-        # Safety net: create the row if somehow missing
-        row = AppSettings(id=1, embedding_provider="local", openai_api_key=None)
+        row = AppSettings(id=1)
         session.add(row)
 
     if data.embedding_provider is not None:
@@ -65,23 +60,15 @@ async def reembed_links(session: SessionDep, provider: ProviderDep) -> dict:
     Fetches link content without loading existing embeddings (wasteful).
     Returns the count of links updated.
     """
-    result = await session.execute(
-        select(Link.id, Link.url, Link.title, Link.snippet)
+    result = await session.execute(select(Link))
+    links = list(result.scalars().all())
+    logger.warning("reembed: starting re-embed of %d links", len(links))
+
+    embeddings = await asyncio.gather(
+        *[provider.embed(text_for_embedding(link.title, link.snippet, link.url)) for link in links]
     )
-    rows = result.all()
-    logger.warning("reembed: starting re-embed of %d links", len(rows))
-
-    count = 0
-    for row in rows:
-        link_id, url, title, snippet = row
-        text = " ".join(filter(None, [title, snippet, url]))
-        embedding = await provider.embed(text)
-
-        # Fetch the ORM object to update it
-        link_result = await session.execute(select(Link).where(Link.id == link_id))
-        link = link_result.scalar_one()
+    for link, embedding in zip(links, embeddings):
         link.embedding = embedding
-        count += 1
 
     await session.commit()
-    return {"reembedded": count}
+    return {"reembedded": len(links)}

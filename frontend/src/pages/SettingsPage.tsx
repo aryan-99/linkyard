@@ -106,7 +106,7 @@ export default function SettingsPage() {
     <div style={styles.page}>
       <h1 style={styles.pageTitle}>Settings</h1>
 
-      {/* ── Embedding Provider ─────────────────────────────────────────────── */}
+
       <section style={styles.section}>
         <h2 style={styles.sectionTitle}>Embedding Provider</h2>
 
@@ -138,7 +138,7 @@ export default function SettingsPage() {
         )}
       </section>
 
-      {/* ── OpenAI API Key ─────────────────────────────────────────────────── */}
+
       <section style={styles.section}>
         <h2 style={styles.sectionTitle}>OpenAI API Key</h2>
         <p style={styles.hint}>
@@ -172,7 +172,7 @@ export default function SettingsPage() {
         />
       </section>
 
-      {/* ── Save button + feedback ─────────────────────────────────────────── */}
+
       <div style={styles.saveRow}>
         <button
           onClick={handleSave}
@@ -185,7 +185,7 @@ export default function SettingsPage() {
         {saveError && <span style={styles.error}>{saveError}</span>}
       </div>
 
-      {/* ── Re-embed ───────────────────────────────────────────────────────── */}
+
       <section style={{ ...styles.section, marginTop: 32 }}>
         <h2 style={styles.sectionTitle}>Re-embed Existing Links</h2>
         <p style={styles.hint}>

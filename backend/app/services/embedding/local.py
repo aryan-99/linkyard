@@ -33,7 +33,7 @@ class LocalProvider(EmbeddingProvider):
         return self._model.get_sentence_embedding_dimension()
 
     async def embed(self, text: str) -> list[float]:
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
 
         def _encode() -> list[float]:
             self._load_model()

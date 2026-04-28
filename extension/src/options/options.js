@@ -13,21 +13,17 @@ chrome.storage.sync.get({ apiBase: DEFAULT_API_BASE }, function(items) {
 btn.addEventListener("click", function() {
   var raw = input.value.trim();
 
-  // Reject empty values
   if (!raw) {
     showStatus("error", "URL cannot be empty.");
     return;
   }
 
-  // Must start with http:// or https://
-  if (!raw.startsWith("http://") && !raw.startsWith("https://")) {
-    showStatus("error", "URL must start with http:// or https://.");
-    return;
-  }
-
-  // Validate as a URL
   try {
-    new URL(raw);
+    var parsed = new URL(raw);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      showStatus("error", "URL must start with http:// or https://.");
+      return;
+    }
   } catch (_) {
     showStatus("error", "Not a valid URL.");
     return;

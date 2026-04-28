@@ -1,12 +1,9 @@
 import uuid
-from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db import get_session
-from app.deps import ProviderDep
+from app.deps import ProviderDep, SessionDep
 from app.models.link import Link
 from app.schemas.link import (
     LinkCreate,
@@ -21,8 +18,6 @@ from app.services.ingest import ingest_link
 from app.services.search import search_links
 
 router = APIRouter()
-
-SessionDep = Annotated[AsyncSession, Depends(get_session)]
 
 
 @router.post("", response_model=LinkDetailResponse, status_code=201)

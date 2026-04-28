@@ -9,6 +9,8 @@ from app.models.app_settings import AppSettings
 from app.services.embedding.base import EmbeddingProvider
 from app.services.embedding.factory import get_embedding_provider_for
 
+SessionDep = Annotated[AsyncSession, Depends(get_session)]
+
 
 async def get_active_provider(
     session: AsyncSession = Depends(get_session),
