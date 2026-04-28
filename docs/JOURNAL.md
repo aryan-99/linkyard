@@ -54,6 +54,9 @@ High-level "why" for choices that shape the codebase. Newest first. An ADR is st
 
 Newest first. Each entry ≤10 lines. Older than ~2 weeks or no longer load-bearing: compact or delete. Promote anything that should outlive the Log into an ADR.
 
+### 2026-04-28 — Extension options page (extension agent)
+Added `src/options/options.html` + `options.js` for configuring backend API base URL via `chrome.storage.sync`. Gear button (⚙) in popup header opens options via `chrome.runtime.openOptionsPage()`. URL validated (must be http/https, trailing slash stripped). `host_permissions` expanded from `localhost:8000` only to all `localhost/*` and `127.0.0.1/*` ports (http + https) to support arbitrary local ports. `manifest.json` gains `options_ui` declaration. No new Chrome API permissions.
+
 ### 2026-04-28 — Settings + provider switching (backend + frontend + qa + security)
 Backend: `AppSettings` table (migration 0002, always id=1 row) stores active provider + OpenAI API key. `GET/PUT /settings` + `POST /settings/reembed` endpoints. `SettingsResponse` exposes `has_openai_key: bool` only — key never leaves the DB. `OpenAIProvider` implemented but locked out via `SettingsUpdate` validator (422 until 1536-dim migration). `ingest_link` / `search_links` now take provider as a parameter; `get_active_provider` dep reads DB row, falls back to "local". Config default changed "stub" → "local". Frontend: `SettingsPage` with provider dropdown (OpenAI disabled/"coming soon"), masked API key field with clear button, re-embed section with result feedback; Settings tab added to nav.
 QA: 12 integration tests in `tests/test_settings.py` (CRUD, key never-leaked in GET+PUT, clear-by-empty-string, null=no-change, reembed count, provider dependency end-to-end). Tests need real Postgres — run `alembic upgrade head` then `pytest`.

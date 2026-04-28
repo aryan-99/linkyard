@@ -1,7 +1,13 @@
-const btn       = document.getElementById("save");
-const status    = document.getElementById("status");
-const pageTitle = document.getElementById("page-title");
-const pageUrl   = document.getElementById("page-url");
+const btn        = document.getElementById("save");
+const status     = document.getElementById("status");
+const pageTitle  = document.getElementById("page-title");
+const pageUrl    = document.getElementById("page-url");
+const optionsBtn = document.getElementById("options-btn");
+
+// ── Options gear button ───────────────────────────────────────────────────────
+optionsBtn.addEventListener("click", () => {
+  chrome.runtime.openOptionsPage();
+});
 
 // ── On load: populate title and URL from the active tab ──────────────────────
 // chrome.tabs.query with "tabs" permission returns full tab.url and tab.title.
