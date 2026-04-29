@@ -29,6 +29,10 @@ POST /settings/reembed:
 Provider dependency (integration):
  12. After setting provider to "stub" via PUT /settings, POST /links produces a
      non-null embedding (stub provider is active end-to-end)
+
+Auth behaviour:
+ 13. GET /settings without a token when admin_token is configured → 401
+ 14. PUT /settings without a token when admin_token is configured → 401
 """
 
 import uuid
@@ -38,8 +42,15 @@ from httpx import AsyncClient
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app import config as app_config
 from app.models.app_settings import AppSettings
 from app.models.link import Link
+
+# Token value used in all settings tests that require auth.
+_TEST_TOKEN = "testtoken"
+
+# Convenience header dict — pass as `headers=auth_headers` on every settings request.
+auth_headers = {"Authorization": f"Bearer {_TEST_TOKEN}"}
 
 
 # ── helpers ────────────────────────────────────────────────────────────────────
@@ -55,6 +66,18 @@ def _link_payload(**overrides) -> dict:
 
 
 # ── fixtures ───────────────────────────────────────────────────────────────────
+
+@pytest.fixture(autouse=True)
+def patch_admin_token(monkeypatch):
+    """
+    Set settings.admin_token to the test token value for every settings test.
+
+    Uses monkeypatch.setattr so the original value is restored after each test.
+    This means every test in this module runs with auth enforced — callers must
+    pass auth_headers on all settings requests, or expect a 401.
+    """
+    monkeypatch.setattr(app_config.settings, "admin_token", _TEST_TOKEN)
+
 
 @pytest.fixture(autouse=True)
 async def reset_settings(engine):
@@ -81,7 +104,7 @@ async def reset_settings(engine):
 
 async def test_get_settings_returns_defaults_on_fresh_row(client: AsyncClient):
     """GET /settings returns 200 with provider='local' and has_openai_key=False."""
-    resp = await client.get("/settings")
+    resp = await client.get("/settings", headers=auth_headers)
     assert resp.status_code == 200, resp.text
 
     body = resp.json()
@@ -91,7 +114,7 @@ async def test_get_settings_returns_defaults_on_fresh_row(client: AsyncClient):
 
 async def test_get_settings_never_includes_api_key_field(client: AsyncClient):
     """GET /settings must not expose the raw openai_api_key in the JSON response."""
-    resp = await client.get("/settings")
+    resp = await client.get("/settings", headers=auth_headers)
     assert resp.status_code == 200, resp.text
 
     body = resp.json()
@@ -104,7 +127,7 @@ async def test_get_settings_never_includes_api_key_field(client: AsyncClient):
 
 async def test_put_settings_updates_provider_to_stub(client: AsyncClient):
     """PUT /settings with embedding_provider='stub' returns the updated provider."""
-    resp = await client.put("/settings", json={"embedding_provider": "stub"})
+    resp = await client.put("/settings", json={"embedding_provider": "stub"}, headers=auth_headers)
     assert resp.status_code == 200, resp.text
 
     body = resp.json()
@@ -113,7 +136,7 @@ async def test_put_settings_updates_provider_to_stub(client: AsyncClient):
 
 async def test_put_settings_rejects_openai_provider_with_422(client: AsyncClient):
     """PUT /settings with embedding_provider='openai' returns 422 mentioning 'migration'."""
-    resp = await client.put("/settings", json={"embedding_provider": "openai"})
+    resp = await client.put("/settings", json={"embedding_provider": "openai"}, headers=auth_headers)
     assert resp.status_code == 422, resp.text
 
     # The validation message must mention "migration" so callers understand why
@@ -126,12 +149,12 @@ async def test_put_settings_rejects_openai_provider_with_422(client: AsyncClient
 async def test_put_settings_omitting_provider_leaves_it_unchanged(client: AsyncClient):
     """PUT /settings without embedding_provider field keeps the existing provider value."""
     # First set provider to "stub"
-    set_resp = await client.put("/settings", json={"embedding_provider": "stub"})
+    set_resp = await client.put("/settings", json={"embedding_provider": "stub"}, headers=auth_headers)
     assert set_resp.status_code == 200, set_resp.text
     assert set_resp.json()["embedding_provider"] == "stub"
 
     # Now PUT with only the API key field — provider must remain "stub"
-    patch_resp = await client.put("/settings", json={"openai_api_key": "some-key"})
+    patch_resp = await client.put("/settings", json={"openai_api_key": "some-key"}, headers=auth_headers)
     assert patch_resp.status_code == 200, patch_resp.text
     assert patch_resp.json()["embedding_provider"] == "stub", (
         "embedding_provider must not change when omitted from the request body"
@@ -142,7 +165,7 @@ async def test_put_settings_omitting_provider_leaves_it_unchanged(client: AsyncC
 
 async def test_put_settings_setting_api_key_makes_has_openai_key_true(client: AsyncClient):
     """PUT /settings with a non-empty openai_api_key sets has_openai_key=True."""
-    resp = await client.put("/settings", json={"openai_api_key": "sk-test-1234"})
+    resp = await client.put("/settings", json={"openai_api_key": "sk-test-1234"}, headers=auth_headers)
     assert resp.status_code == 200, resp.text
 
     body = resp.json()
@@ -152,12 +175,12 @@ async def test_put_settings_setting_api_key_makes_has_openai_key_true(client: As
 async def test_put_settings_clearing_api_key_makes_has_openai_key_false(client: AsyncClient):
     """PUT /settings with openai_api_key='' clears the key; has_openai_key becomes False."""
     # Set a key first
-    set_resp = await client.put("/settings", json={"openai_api_key": "sk-test-abc"})
+    set_resp = await client.put("/settings", json={"openai_api_key": "sk-test-abc"}, headers=auth_headers)
     assert set_resp.status_code == 200, set_resp.text
     assert set_resp.json()["has_openai_key"] is True
 
     # Clear it with an empty string
-    clear_resp = await client.put("/settings", json={"openai_api_key": ""})
+    clear_resp = await client.put("/settings", json={"openai_api_key": ""}, headers=auth_headers)
     assert clear_resp.status_code == 200, clear_resp.text
     assert clear_resp.json()["has_openai_key"] is False
 
@@ -174,30 +197,30 @@ async def test_put_settings_null_api_key_leaves_existing_key_unchanged(
         await session.commit()
 
     # Confirm key is set via GET
-    get_resp = await client.get("/settings")
+    get_resp = await client.get("/settings", headers=auth_headers)
     assert get_resp.json()["has_openai_key"] is True
 
     # PUT with null for the key — must be a no-op for the key field
-    put_resp = await client.put("/settings", json={"openai_api_key": None})
+    put_resp = await client.put("/settings", json={"openai_api_key": None}, headers=auth_headers)
     assert put_resp.status_code == 200, put_resp.text
     assert put_resp.json()["has_openai_key"] is True, (
         "Sending openai_api_key=null must not clear an existing key"
     )
 
     # Verify via a fresh GET as well
-    get_after = await client.get("/settings")
+    get_after = await client.get("/settings", headers=auth_headers)
     assert get_after.json()["has_openai_key"] is True
 
 
 async def test_put_settings_api_key_never_returned_in_response(client: AsyncClient):
     """PUT /settings and GET /settings must never return the raw openai_api_key value."""
-    put_resp = await client.put("/settings", json={"openai_api_key": "sk-secret-key"})
+    put_resp = await client.put("/settings", json={"openai_api_key": "sk-secret-key"}, headers=auth_headers)
     assert put_resp.status_code == 200, put_resp.text
     assert "openai_api_key" not in put_resp.json(), (
         "PUT response must not expose openai_api_key"
     )
 
-    get_resp = await client.get("/settings")
+    get_resp = await client.get("/settings", headers=auth_headers)
     assert get_resp.status_code == 200, get_resp.text
     assert "openai_api_key" not in get_resp.json(), (
         "GET response must not expose openai_api_key"
@@ -208,7 +231,7 @@ async def test_put_settings_api_key_never_returned_in_response(client: AsyncClie
 
 async def test_reembed_with_no_links_returns_zero(client: AsyncClient):
     """POST /settings/reembed with an empty links table returns {"reembedded": 0}."""
-    resp = await client.post("/settings/reembed")
+    resp = await client.post("/settings/reembed", headers=auth_headers)
     assert resp.status_code == 200, resp.text
 
     body = resp.json()
@@ -220,7 +243,7 @@ async def test_reembed_with_links_updates_all_embeddings(
 ):
     """POST /settings/reembed with N links returns {"reembedded": N} and all embeddings are non-null."""
     # Use stub provider so this test runs without sentence-transformers installed.
-    await client.put("/settings", json={"embedding_provider": "stub"})
+    await client.put("/settings", json={"embedding_provider": "stub"}, headers=auth_headers)
 
     n = 3
     urls = [f"https://reembed-{i}.example.com" for i in range(n)]
@@ -236,7 +259,7 @@ async def test_reembed_with_links_updates_all_embeddings(
             link.embedding = None
         await session.commit()
 
-    resp = await client.post("/settings/reembed")
+    resp = await client.post("/settings/reembed", headers=auth_headers)
     assert resp.status_code == 200, resp.text
 
     body = resp.json()
@@ -262,7 +285,7 @@ async def test_post_links_uses_stub_provider_after_settings_update(
 ):
     """After switching provider to 'stub' via PUT /settings, POST /links produces a non-null embedding."""
     # Switch to stub provider
-    put_resp = await client.put("/settings", json={"embedding_provider": "stub"})
+    put_resp = await client.put("/settings", json={"embedding_provider": "stub"}, headers=auth_headers)
     assert put_resp.status_code == 200, put_resp.text
     assert put_resp.json()["embedding_provider"] == "stub"
 
@@ -286,3 +309,35 @@ async def test_post_links_uses_stub_provider_after_settings_update(
         assert len(link.embedding) > 0, (
             "embedding must have non-zero length when stub provider is active"
         )
+
+
+# ── Auth behaviour ────────────────────────────────────────────────────────────
+
+async def test_settings_get_unauthorized(client: AsyncClient):
+    """GET /settings without a Bearer token returns 401 when admin_token is configured.
+
+    The patch_admin_token fixture sets admin_token=_TEST_TOKEN for this test,
+    so the absence of any Authorization header must produce a 401.
+    """
+    # Arrange: no auth header — rely on patch_admin_token autouse fixture
+    # Act
+    resp = await client.get("/settings")
+    # Assert
+    assert resp.status_code == 401, (
+        f"Expected 401 when no token is provided, got {resp.status_code}: {resp.text}"
+    )
+
+
+async def test_settings_put_unauthorized(client: AsyncClient):
+    """PUT /settings without a Bearer token returns 401 when admin_token is configured.
+
+    The patch_admin_token fixture sets admin_token=_TEST_TOKEN for this test,
+    so the absence of any Authorization header must produce a 401.
+    """
+    # Arrange: no auth header — rely on patch_admin_token autouse fixture
+    # Act
+    resp = await client.put("/settings", json={"embedding_provider": "stub"})
+    # Assert
+    assert resp.status_code == 401, (
+        f"Expected 401 when no token is provided, got {resp.status_code}: {resp.text}"
+    )

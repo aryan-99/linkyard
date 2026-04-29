@@ -4,7 +4,7 @@ import logging
 from fastapi import APIRouter
 from sqlalchemy import select
 
-from app.deps import ProviderDep, SessionDep
+from app.deps import AdminTokenDep, ProviderDep, SessionDep
 from app.models.app_settings import AppSettings
 from app.models.link import Link
 from app.schemas.settings import SettingsResponse, SettingsUpdate
@@ -21,7 +21,7 @@ def _row_to_response(row: AppSettings) -> SettingsResponse:
     )
 
 
-@router.get("", response_model=SettingsResponse)
+@router.get("", response_model=SettingsResponse, dependencies=[AdminTokenDep])
 async def get_settings(session: SessionDep) -> SettingsResponse:
     result = await session.execute(select(AppSettings).where(AppSettings.id == 1))
     row = result.scalar_one_or_none()
@@ -31,7 +31,7 @@ async def get_settings(session: SessionDep) -> SettingsResponse:
     return _row_to_response(row)
 
 
-@router.put("", response_model=SettingsResponse)
+@router.put("", response_model=SettingsResponse, dependencies=[AdminTokenDep])
 async def update_settings(
     data: SettingsUpdate, session: SessionDep
 ) -> SettingsResponse:
@@ -53,7 +53,7 @@ async def update_settings(
     return _row_to_response(row)
 
 
-@router.post("/reembed", response_model=dict)
+@router.post("/reembed", response_model=dict, dependencies=[AdminTokenDep])
 async def reembed_links(session: SessionDep, provider: ProviderDep) -> dict:
     """Re-embed all links using the currently active provider.
 

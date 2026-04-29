@@ -1,8 +1,19 @@
 export const BASE = "http://localhost:8000";
 
+let authToken: string | null = null;
+
+/** Call with a non-empty string to send `Authorization: Bearer <token>` on every request.
+ *  Call with null or empty string to stop sending the header. */
+export function setAuthToken(token: string | null): void {
+  authToken = token && token.length > 0 ? token : null;
+}
+
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const authHeader: Record<string, string> =
+    authToken !== null ? { Authorization: `Bearer ${authToken}` } : {};
+
   const res = await fetch(`${BASE}${path}`, {
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeader },
     ...init,
   });
   if (!res.ok) {

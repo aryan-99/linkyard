@@ -28,6 +28,11 @@ class Settings(BaseSettings):
     #   CORS_ORIGIN_REGEX=chrome-extension://abcdefghijklmnopabcdefghijklmnop
     cors_origin_regex: str = r"chrome-extension://[a-p]{32}"
 
+    # Static bearer token for settings endpoints.
+    # Leave unset (or empty) to disable auth — safe for local dev.
+    # Set ADMIN_TOKEN=<secret> in .env to require Bearer auth on /settings routes.
+    admin_token: str | None = None
+
     @property
     def cors_origins(self) -> list[str]:
         return [o.strip() for o in self.cors_origins_raw.split(",") if o.strip()]

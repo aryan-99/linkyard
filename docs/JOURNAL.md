@@ -21,11 +21,11 @@ When the Log exceeds ~150 lines, summarize or delete older entries. Promote anyt
 
 ## Current state
 
-- **Phase:** Stage 4 complete. Local semantic embeddings, settings API, extension options page.
-- **Runnable:** Backend serves `/links` CRUD + `GET /links/search?q=` + `GET/PUT /settings` + `POST /settings/reembed` + `/healthz`. Frontend has Links, Search, and Settings tabs. Extension popup saves current tab; gear icon opens options page to configure backend URL. DB needs `docker compose -f docker-compose.dev.yml up -d` then `alembic upgrade head` (from `backend/`) before first use. Load extension via `chrome://extensions > Load unpacked > extension/`. Run `pip install -r requirements.txt` to install `sentence-transformers` for local semantic search.
+- **Phase:** Stage 5 in progress. Auth on settings endpoints shipped; live test pending.
+- **Runnable:** Backend serves `/links` CRUD + `GET /links/search?q=` + `GET/PUT /settings` + `POST /settings/reembed` + `/healthz`. Settings endpoints require `Authorization: Bearer <token>` when `ADMIN_TOKEN` is set in `.env`. Frontend has Links, Search, and Settings tabs; Settings page has Admin Token section at top. Extension popup saves current tab; gear icon opens options page to configure backend URL. DB needs `docker compose -f docker-compose.dev.yml up -d` then `alembic upgrade head` (from `backend/`) before first use. Load extension via `chrome://extensions > Load unpacked > extension/`. Run `pip install -r requirements.txt` to install `sentence-transformers` for local semantic search.
 - **Docs:** `HOW_IT_WORKS.md` added — conceptual design guide.
-- **In flight:** None.
-- **Next logical slice:** Migrate vector column to 1536-dim + wire OpenAIProvider (pre-prod blockers: auth on settings endpoints, encrypt API key at rest). Or: extension options page already ships — consider extension QA.
+- **In flight:** Live test by user; then OpenAI path (1536-dim migration + OpenAIProvider unlock).
+- **Next logical slice:** Migrate vector column to 1536-dim + wire OpenAIProvider (now unblocked — auth is in). Encrypt API key at rest is a remaining pre-prod item.
 
 ---
 
@@ -53,6 +53,9 @@ High-level "why" for choices that shape the codebase. Newest first. An ADR is st
 ## Log
 
 Newest first. Each entry ≤10 lines. Older than ~2 weeks or no longer load-bearing: compact or delete. Promote anything that should outlive the Log into an ADR.
+
+### 2026-04-29 — Static bearer-token auth on settings endpoints (backend + frontend + qa)
+`ADMIN_TOKEN` env var added to `config.py` (str | None, default None — auth disabled when unset). `AdminTokenDep` in `deps.py` uses `HTTPBearer(auto_error=False)`: pass-through when token unset, HTTP 401 on wrong/missing token when set. Applied via `dependencies=[AdminTokenDep]` to all three settings routes (`GET/PUT /settings`, `POST /settings/reembed`). `/links` and `/healthz` unprotected by design. Frontend: `setAuthToken()` added to `client.ts`; `request<T>` sends `Authorization: Bearer` header only when token is non-null. Settings page gains "Admin Token" section at top — password input, Save token button, persisted to `localStorage` under `linkyard_admin_token`. `main.tsx` bootstraps token from localStorage before first render. QA: `test_settings.py` updated with `patch_admin_token` autouse fixture + auth headers on all 12 existing tests + 2 new 401 tests (14 total). Pre-prod: set `ADMIN_TOKEN` to a random secret in `.env`.
 
 ### 2026-04-28 — Simplify pass (architect)
 Dedup: `request<T>` + `BASE` extracted to `frontend/src/api/client.ts`; `SessionDep` centralised in `deps.py`; `text_for_embedding()` extracted to `ingest.py` and shared with `settings.py`. Efficiency: reembed N+1 eliminated (single `select(Link)`), embed calls parallelised with `asyncio.gather`, `httpx.AsyncClient` moved to `OpenAIProvider.__init__`. Bug: `asyncio.get_event_loop()` → `get_running_loop()` (deprecated in 3.10+). Extension: `showStatus()` helper added to `popup.js`; URL protocol check in `options.js` collapsed into `new URL()` try/catch. 26 tests still passing.
