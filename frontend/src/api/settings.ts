@@ -3,11 +3,13 @@ import { request } from "./client";
 export interface AppSettings {
   embedding_provider: string;
   has_openai_key: boolean;
+  search_threshold: number;
 }
 
 export interface SettingsUpdate {
   embedding_provider?: string;
   openai_api_key?: string | null;
+  search_threshold?: number;
 }
 
 export function getSettings(): Promise<AppSettings> {

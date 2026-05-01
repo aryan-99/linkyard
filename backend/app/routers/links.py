@@ -3,7 +3,7 @@ import uuid
 from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import func, select
 
-from app.deps import ProviderDep, SessionDep
+from app.deps import ProviderDep, SearchThresholdDep, SessionDep
 from app.models.link import Link
 from app.schemas.link import (
     LinkCreate,
@@ -54,11 +54,12 @@ async def list_links(
 async def search_links_endpoint(
     session: SessionDep,
     provider: ProviderDep,
+    threshold: SearchThresholdDep,
     q: str = Query(..., min_length=1),
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
 ) -> SearchResultsResponse:
-    results, total = await search_links(session, q, provider, limit, offset)
+    results, total = await search_links(session, q, provider, limit, offset, threshold)
     return SearchResultsResponse(
         items=[
             SearchResultItem(**LinkResponse.model_validate(link).model_dump(), score=score)

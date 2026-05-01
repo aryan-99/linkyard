@@ -24,7 +24,11 @@ class LocalProvider(EmbeddingProvider):
     def _load_model(self) -> None:
         if self._model is None:
             from sentence_transformers import SentenceTransformer  # noqa: PLC0415
-            self._model = SentenceTransformer(self._model_name)
+            self._model = SentenceTransformer(
+                self._model_name,
+                device="cpu",
+                model_kwargs={"device_map": None},
+            )
 
     @property
     def dim(self) -> int:

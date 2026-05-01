@@ -14,6 +14,7 @@ export default function SettingsPage() {
   // Form state
   const [provider, setProvider] = useState<string>("local");
   const [apiKey, setApiKey] = useState("");
+  const [threshold, setThreshold] = useState<number>(0.3);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -41,6 +42,7 @@ export default function SettingsPage() {
       .then((data) => {
         setSettings(data);
         setProvider(data.embedding_provider);
+        setThreshold(data.search_threshold);
       })
       .catch((err) => {
         setLoadError(err instanceof Error ? err.message : "Failed to load settings");
@@ -65,6 +67,7 @@ export default function SettingsPage() {
       .then((data) => {
         setSettings(data);
         setProvider(data.embedding_provider);
+        setThreshold(data.search_threshold);
       })
       .catch((err) => {
         setLoadError(err instanceof Error ? err.message : "Failed to load settings");
@@ -78,12 +81,14 @@ export default function SettingsPage() {
 
     const update = {
       embedding_provider: provider,
+      search_threshold: threshold,
       ...(apiKey.trim() !== "" ? { openai_api_key: apiKey.trim() } : {}),
     };
 
     try {
       const updated = await updateSettings(update);
       setSettings(updated);
+      setThreshold(updated.search_threshold);
       setApiKey("");
       setSaveSuccess(true);
     } catch (err) {
@@ -189,7 +194,7 @@ export default function SettingsPage() {
 
             {provider === "local" && (
               <p style={styles.hint}>
-                Using local sentence-transformers model (all-MiniLM-L6-v2). No API key required.
+                Using local sentence-transformers model (multi-qa-MiniLM-L6-cos-v1). No API key required.
               </p>
             )}
             {provider === "stub" && (
@@ -197,6 +202,30 @@ export default function SettingsPage() {
                 Stub provider returns zero vectors. Intended for testing only.
               </p>
             )}
+          </section>
+
+          <section style={styles.section}>
+            <h2 style={styles.sectionTitle}>Search Threshold</h2>
+            <p style={styles.hint}>
+              Minimum similarity score (0–1) a result must reach to appear in search. Higher values
+              return fewer but more relevant results. Default: 0.30.
+            </p>
+            <label style={styles.label} htmlFor="threshold-input">
+              Score threshold
+            </label>
+            <input
+              id="threshold-input"
+              type="number"
+              min={0}
+              max={1}
+              step={0.01}
+              value={threshold}
+              onChange={(e) => {
+                const val = parseFloat(e.target.value);
+                if (!isNaN(val)) setThreshold(Math.min(1, Math.max(0, val)));
+              }}
+              style={{ ...styles.input, width: 100 }}
+            />
           </section>
 
           <section style={styles.section}>

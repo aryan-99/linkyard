@@ -18,6 +18,7 @@ def _row_to_response(row: AppSettings) -> SettingsResponse:
     return SettingsResponse(
         embedding_provider=row.embedding_provider,
         has_openai_key=bool(row.openai_api_key),
+        search_threshold=row.search_threshold,
     )
 
 
@@ -27,7 +28,7 @@ async def get_settings(session: SessionDep) -> SettingsResponse:
     row = result.scalar_one_or_none()
     if row is None:
         # Row missing (pre-migration dev env): return defaults, never leak key
-        return SettingsResponse(embedding_provider="local", has_openai_key=False)
+        return SettingsResponse(embedding_provider="local", has_openai_key=False, search_threshold=0.3)
     return _row_to_response(row)
 
 
@@ -48,6 +49,9 @@ async def update_settings(
         # Empty string means "clear the key"; non-empty means "set it"
         row.openai_api_key = None if data.openai_api_key == "" else data.openai_api_key
 
+    if data.search_threshold is not None:
+        row.search_threshold = data.search_threshold
+
     await session.commit()
     await session.refresh(row)
     return _row_to_response(row)
@@ -65,7 +69,7 @@ async def reembed_links(session: SessionDep, provider: ProviderDep) -> dict:
     logger.warning("reembed: starting re-embed of %d links", len(links))
 
     embeddings = await asyncio.gather(
-        *[provider.embed(text_for_embedding(link.title, link.snippet, link.url)) for link in links]
+        *[provider.embed(text_for_embedding(link.title, link.snippet, link.meta_description)) for link in links]
     )
     for link, embedding in zip(links, embeddings):
         link.embedding = embedding

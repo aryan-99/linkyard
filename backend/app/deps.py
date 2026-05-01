@@ -67,3 +67,19 @@ async def get_active_provider(
 
 
 ProviderDep = Annotated[EmbeddingProvider, Depends(get_active_provider)]
+
+
+async def get_search_threshold(
+    session: AsyncSession = Depends(get_session),
+) -> float:
+    """FastAPI dependency that returns the configured search score threshold.
+
+    Reads search_threshold from the app_settings DB row (id=1).
+    Falls back to 0.3 if the row is missing (e.g. pre-migration dev env).
+    """
+    result = await session.execute(select(AppSettings).where(AppSettings.id == 1))
+    row = result.scalar_one_or_none()
+    return row.search_threshold if row is not None else 0.3
+
+
+SearchThresholdDep = Annotated[float, Depends(get_search_threshold)]

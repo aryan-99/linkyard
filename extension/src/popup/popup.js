@@ -3,6 +3,7 @@ const status     = document.getElementById("status");
 const pageTitle  = document.getElementById("page-title");
 const pageUrl    = document.getElementById("page-url");
 const optionsBtn = document.getElementById("options-btn");
+const snippetEl  = document.getElementById("snippet");
 
 function showStatus(type, message) {
   status.className = type;
@@ -46,11 +47,14 @@ btn.addEventListener("click", async () => {
   }
 
   btn.disabled = true;
+  snippetEl.disabled = true;
   showStatus("saving", "Saving\u2026");
 
+  const snippet = snippetEl.value.trim();
   const payload = {
     url: currentTab.url,
     title: currentTab.title ?? null,
+    ...(snippet ? { snippet } : {}),
   };
 
   // Route through the background service worker so the fetch runs in its
@@ -60,6 +64,7 @@ btn.addEventListener("click", async () => {
     if (chrome.runtime.lastError) {
       showStatus("error", "Extension error: " + chrome.runtime.lastError.message);
       btn.disabled = false;
+      snippetEl.disabled = false;
       return;
     }
 
@@ -70,6 +75,7 @@ btn.addEventListener("click", async () => {
     } else {
       showStatus("error", "Failed: " + (resp?.status ?? resp?.error ?? "unknown error"));
       btn.disabled = false;
+      snippetEl.disabled = false;
     }
   });
 });

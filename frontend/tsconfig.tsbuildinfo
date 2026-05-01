@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/api/client.ts","./src/api/links.ts","./src/api/search.ts","./src/api/settings.ts","./src/components/addlinkform.tsx","./src/pages/linkspage.tsx","./src/pages/searchpage.tsx","./src/pages/settingspage.tsx"],"version":"5.9.3"}

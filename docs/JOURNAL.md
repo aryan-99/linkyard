@@ -21,11 +21,11 @@ When the Log exceeds ~150 lines, summarize or delete older entries. Promote anyt
 
 ## Current state
 
-- **Phase:** Stage 5 in progress. Live test done. Search embedding quality improved.
-- **Runnable:** Backend serves `/links` CRUD + `GET /links/search?q=` + `GET/PUT /settings` + `POST /settings/reembed` + `/healthz`. Settings endpoints require `Authorization: Bearer <token>` when `ADMIN_TOKEN` is set in `.env`. Frontend has Links, Search, and Settings tabs; Settings page has Admin Token section at top. Extension popup saves current tab; gear icon opens options page to configure backend URL. DB needs `docker compose -f docker-compose.dev.yml up -d` then `alembic upgrade head` (from `backend/`) before first use. Load extension via `chrome://extensions > Load unpacked > extension/`. Run `pip install -r requirements.txt` to install `sentence-transformers` for local semantic search.
+- **Phase:** Stage 5 in progress. QoL pass partially done (threshold + meta_description + extension snippet). HNSW index still deferred.
+- **Runnable:** Backend serves `/links` CRUD + `GET /links/search?q=` + `GET/PUT /settings` + `POST /settings/reembed` + `/healthz`. Settings endpoints require `Authorization: Bearer <token>` when `ADMIN_TOKEN` is set in `.env`. Frontend has Links, Search, and Settings tabs; Settings page has Admin Token, Embedding Provider, Search Threshold, OpenAI API Key, and Re-embed sections. Extension popup saves current tab with optional snippet; gear icon opens options page to configure backend URL. DB needs `docker compose -f docker-compose.dev.yml up -d` then `alembic upgrade head` (from `backend/`) before first use. Load extension via `chrome://extensions > Load unpacked > extension/`. Run `pip install -r requirements.txt` to install `sentence-transformers` for local semantic search.
 - **Docs:** `HOW_IT_WORKS.md` added — conceptual design guide.
-- **In flight:** QoL pass (search threshold + meta_description in embeddings + HNSW index), then OpenAI provider, then Docker packaging + public release.
-- **Next logical slice:** QoL pass — see deferred search improvements in log entry below. Then OpenAI path (1536-dim migration + OpenAIProvider unlock). Encrypt API key at rest remains a pre-prod blocker.
+- **In flight:** HNSW index migration (last QoL item), then OpenAI provider, then Docker packaging + public release.
+- **Next logical slice:** Alembic migration adding HNSW index on `embedding` column. Then OpenAI path (1536-dim migration + OpenAIProvider unlock). Encrypt API key at rest remains a pre-prod blocker.
 
 ---
 
@@ -53,6 +53,9 @@ High-level "why" for choices that shape the codebase. Newest first. An ADR is st
 ## Log
 
 Newest first. Each entry ≤10 lines. Older than ~2 weeks or no longer load-bearing: compact or delete. Promote anything that should outlive the Log into an ADR.
+
+### 2026-05-01 — QoL pass: search threshold, meta_description, extension snippet (architect)
+`search_threshold` (float, default 0.3) added to `app_settings` via Alembic migration 0003 (`server_default="0.3"`). `SearchThresholdDep` reads it per request; `search_links()` post-filters results by `score >= threshold`. `GET/PUT /settings` expose the field; Settings page gains a "Search Threshold" number input (0–1, step 0.01, clamped). `text_for_embedding()` now takes `meta_description` instead of `url` — uses `snippet or meta_description` so meta_description fills in when snippet is absent. Extension popup gains an optional "Add a note" textarea; snippet is included in the POST payload only when non-empty. `LocalProvider` now passes `device="cpu"` + `model_kwargs={"device_map": None}` to prevent accelerate meta-tensor errors on systems where the GPU isn't supported by the installed PyTorch version (e.g. Blackwell on PyTorch < 2.7). **Deferred:** HNSW index migration.
 
 ### 2026-04-29 — Live test + search embedding improvements (architect)
 Live test completed. Two search fixes shipped: (1) negative match % clamped to 0 in `SearchPage.tsx` (cosine distance can exceed 1 for non-orthogonal vectors); (2) embedding model swapped from `all-MiniLM-L6-v2` → `multi-qa-MiniLM-L6-cos-v1` (retrieval-trained, same 384-dim, no migration); (3) URL removed from `text_for_embedding` — was adding noise with no semantic value. After restart, re-embed all links via Settings.
