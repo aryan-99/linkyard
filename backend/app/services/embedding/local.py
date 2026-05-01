@@ -17,7 +17,7 @@ class LocalProvider(EmbeddingProvider):
     executor so it never stalls the async event loop.
     """
 
-    def __init__(self, model_name: str = "all-MiniLM-L6-v2") -> None:
+    def __init__(self, model_name: str = "multi-qa-MiniLM-L6-cos-v1") -> None:
         self._model_name = model_name
         self._model: Optional[object] = None
 

@@ -91,7 +91,7 @@ function SearchRow({ item }: SearchRowProps) {
           {item.title ?? item.url}
         </a>
         <span style={styles.scoreBadge} title="Semantic similarity score">
-          {Math.round(item.score * 100)}% match
+          {Math.max(0, Math.round(item.score * 100))}% match
         </span>
       </div>
       <div style={styles.itemUrl}>{item.url}</div>

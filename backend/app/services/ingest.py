@@ -8,7 +8,7 @@ from app.services.embedding.base import EmbeddingProvider
 
 
 def text_for_embedding(title: str | None, snippet: str | None, url: str) -> str:
-    return " ".join(filter(None, [title, snippet, url]))
+    return " ".join(filter(None, [title, snippet]))
 
 
 def _normalize_url(url: str) -> str:

@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     embedding_provider: str = "local"
     embedding_dim: int = 384
 
-    local_embedding_model: str = "all-MiniLM-L6-v2"
+    local_embedding_model: str = "multi-qa-MiniLM-L6-cos-v1"
 
     openai_api_key: str | None = None
     openai_embedding_model: str = "text-embedding-3-small"

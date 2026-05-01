@@ -21,11 +21,11 @@ When the Log exceeds ~150 lines, summarize or delete older entries. Promote anyt
 
 ## Current state
 
-- **Phase:** Stage 5 in progress. Auth on settings endpoints shipped; live test pending.
+- **Phase:** Stage 5 in progress. Live test done. Search embedding quality improved.
 - **Runnable:** Backend serves `/links` CRUD + `GET /links/search?q=` + `GET/PUT /settings` + `POST /settings/reembed` + `/healthz`. Settings endpoints require `Authorization: Bearer <token>` when `ADMIN_TOKEN` is set in `.env`. Frontend has Links, Search, and Settings tabs; Settings page has Admin Token section at top. Extension popup saves current tab; gear icon opens options page to configure backend URL. DB needs `docker compose -f docker-compose.dev.yml up -d` then `alembic upgrade head` (from `backend/`) before first use. Load extension via `chrome://extensions > Load unpacked > extension/`. Run `pip install -r requirements.txt` to install `sentence-transformers` for local semantic search.
 - **Docs:** `HOW_IT_WORKS.md` added — conceptual design guide.
-- **In flight:** Live test by user; then OpenAI path (1536-dim migration + OpenAIProvider unlock).
-- **Next logical slice:** Migrate vector column to 1536-dim + wire OpenAIProvider (now unblocked — auth is in). Encrypt API key at rest is a remaining pre-prod item.
+- **In flight:** QoL pass (search threshold + meta_description in embeddings + HNSW index), then OpenAI provider, then Docker packaging + public release.
+- **Next logical slice:** QoL pass — see deferred search improvements in log entry below. Then OpenAI path (1536-dim migration + OpenAIProvider unlock). Encrypt API key at rest remains a pre-prod blocker.
 
 ---
 
@@ -53,6 +53,11 @@ High-level "why" for choices that shape the codebase. Newest first. An ADR is st
 ## Log
 
 Newest first. Each entry ≤10 lines. Older than ~2 weeks or no longer load-bearing: compact or delete. Promote anything that should outlive the Log into an ADR.
+
+### 2026-04-29 — Live test + search embedding improvements (architect)
+Live test completed. Two search fixes shipped: (1) negative match % clamped to 0 in `SearchPage.tsx` (cosine distance can exceed 1 for non-orthogonal vectors); (2) embedding model swapped from `all-MiniLM-L6-v2` → `multi-qa-MiniLM-L6-cos-v1` (retrieval-trained, same 384-dim, no migration); (3) URL removed from `text_for_embedding` — was adding noise with no semantic value. After restart, re-embed all links via Settings.
+**Deferred search improvements (QoL pass):** (a) add `meta_description` to `text_for_embedding` as fallback when snippet is empty; (b) score threshold ~0.30 to suppress weak matches; (c) HNSW index on `embedding` column via Alembic migration. None are blocking — save for QoL pass.
+**Release checklist (in order):** QoL pass → OpenAI provider (1536-dim migration) → encrypt API key at rest → CORS pin → Docker packaging → README → secrets audit → tag + push.
 
 ### 2026-04-29 — Static bearer-token auth on settings endpoints (backend + frontend + qa)
 `ADMIN_TOKEN` env var added to `config.py` (str | None, default None — auth disabled when unset). `AdminTokenDep` in `deps.py` uses `HTTPBearer(auto_error=False)`: pass-through when token unset, HTTP 401 on wrong/missing token when set. Applied via `dependencies=[AdminTokenDep]` to all three settings routes (`GET/PUT /settings`, `POST /settings/reembed`). `/links` and `/healthz` unprotected by design. Frontend: `setAuthToken()` added to `client.ts`; `request<T>` sends `Authorization: Bearer` header only when token is non-null. Settings page gains "Admin Token" section at top — password input, Save token button, persisted to `localStorage` under `linkyard_admin_token`. `main.tsx` bootstraps token from localStorage before first render. QA: `test_settings.py` updated with `patch_admin_token` autouse fixture + auth headers on all 12 existing tests + 2 new 401 tests (14 total). Pre-prod: set `ADMIN_TOKEN` to a random secret in `.env`.
