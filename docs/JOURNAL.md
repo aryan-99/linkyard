@@ -25,7 +25,7 @@ When the Log exceeds ~150 lines, summarize or delete older entries. Promote anyt
 - **Runnable:** Backend serves `/links` CRUD + `POST /links/{id}/refetch` + `GET /links/search?q=` + `GET/PUT /settings` + `POST /settings/reembed` + `POST /settings/refetch` + `/healthz`. Settings endpoints require `Authorization: Bearer <token>` when `ADMIN_TOKEN` is set in `.env`. Frontend has Links, Search, and Settings tabs; link cards show extracted body preview + per-card re-fetch button (⟳) with tooltip; Settings has Admin Token, Embedding Provider, Search Threshold, OpenAI API Key, Re-embed (with confirm dialog), and Re-fetch (with confirm dialog + force checkbox). Extension popup saves current tab with optional snippet; gear icon opens options page to configure backend URL. DB needs `docker compose -f docker-compose.dev.yml up -d` then `alembic upgrade head` (from `backend/`) before first use. Load extension via `chrome://extensions > Load unpacked > extension/`. Run `pip install -r requirements.txt`.
 - **Tests:** 23 unit tests — `tests/unit/test_ingest.py` (pure functions) + `tests/unit/test_fetch.py` (httpx via respx); `suppress_page_fetch` autouse fixture guards all integration tests.
 - **Docs:** `HOW_IT_WORKS.md` added — conceptual design guide.
-- **Next logical slice:** HNSW index migration → OpenAI provider unlock (1536-dim migration) → encrypt API key at rest (pre-prod blocker) → CORS pin → egress firewall rule (RFC-1918 + link-local, DNS rebinding defense) → Docker packaging → release.
+- **Next logical slice:** OpenAI provider unlock (1536-dim migration) → encrypt API key at rest (pre-prod blocker) → CORS pin → egress firewall rule (RFC-1918 + link-local, DNS rebinding defense) → Docker packaging → release.
 
 ---
 
@@ -53,6 +53,9 @@ High-level "why" for choices that shape the codebase. Newest first. An ADR is st
 ## Log
 
 Newest first. Each entry ≤10 lines. Older than ~2 weeks or no longer load-bearing: compact or delete. Promote anything that should outlive the Log into an ADR.
+
+### 2026-05-11 — HNSW index migration (backend)
+Added `0005_hnsw_index.py`, chained to 0004. Creates HNSW index (`m=16, ef_construction=64`, `vector_cosine_ops`) on `links.embedding` to accelerate `<=>` cosine search queries. Downgrade drops the index; table and data untouched. Requires pgvector >= 0.5.0. Not built `CONCURRENTLY` — acceptable at current scale.
 
 ### 2026-05-04 — QA: _fetch_page_body coverage + redirect SSRF fix (qa + backend)
 Added `tests/unit/test_fetch.py` (9 tests, `respx`) exercising `_fetch_page_body` with a real httpx `AsyncClient` against a mocked transport. Tests cover: happy path, non-200, non-HTML content-type, network error, timeout, SSRF pre-block (private IP + loopback), redirect-to-private-IP, 5 MB truncation. In doing so, caught two bugs: (1) async event hook error — `_raise_if_ssrf_redirect` was sync; fixed to `async def`. (2) Redirect SSRF hook was non-functional — `response.next_request` is always `None` when `follow_redirects=True` in httpx; fixed to read `response.headers["location"]` instead. `respx` added to `requirements.txt` dev section.
