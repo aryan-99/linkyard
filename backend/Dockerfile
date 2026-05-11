@@ -34,7 +34,9 @@ RUN chmod +x /usr/local/bin/block_egress_private.sh
 # ── runtime ───────────────────────────────────────────────────────────────────
 EXPOSE 8000
 
-# The egress firewall runs first (requires root / CAP_NET_ADMIN), then uvicorn
-# starts as root inside the container.  For tighter security, add a USER
-# directive after the iptables call once CAP_NET_ADMIN can be dropped.
+# TODO: drop to non-root user after iptables — requires gosu or init container
+# pattern.  iptables (called first in CMD) needs root/CAP_NET_ADMIN; uvicorn
+# should then exec as an unprivileged user via `gosu app uvicorn ...`.
+# Until gosu is added, the process runs as root inside the container.
+# CAP_NET_ADMIN is scoped in compose (cap_add) so blast radius is limited.
 CMD ["/bin/sh", "-c", "/usr/local/bin/block_egress_private.sh && exec uvicorn app.main:app --host 0.0.0.0 --port 8000"]

@@ -21,11 +21,11 @@ When the Log exceeds ~150 lines, summarize or delete older entries. Promote anyt
 
 ## Current state
 
-- **Phase:** Stage 5 in progress. QoL pass complete. HNSW index still deferred.
+- **Phase:** v1.0 release prep. All pre-release security fixes applied. Frontend polish + release pending.
 - **Runnable:** Backend serves `/links` CRUD + `POST /links/{id}/refetch` + `GET /links/search?q=` + `GET/PUT /settings` + `POST /settings/reembed` + `POST /settings/refetch` + `/healthz`. Settings endpoints require `Authorization: Bearer <token>` when `ADMIN_TOKEN` is set in `.env`. Frontend has Links, Search, and Settings tabs; link cards show extracted body preview + per-card re-fetch button (⟳) with tooltip; Settings has Admin Token, Embedding Provider, Search Threshold, OpenAI API Key, Re-embed (with confirm dialog), and Re-fetch (with confirm dialog + force checkbox). Extension popup saves current tab with optional snippet; gear icon opens options page to configure backend URL. DB needs `docker compose -f docker-compose.dev.yml up -d` then `alembic upgrade head` (from `backend/`) before first use. Load extension via `chrome://extensions > Load unpacked > extension/`. Run `pip install -r requirements.txt`.
 - **Tests:** 23 unit tests — `tests/unit/test_ingest.py` (pure functions) + `tests/unit/test_fetch.py` (httpx via respx); `suppress_page_fetch` autouse fixture guards all integration tests.
 - **Docs:** `HOW_IT_WORKS.md` added — conceptual design guide.
-- **Next logical slice:** OpenAI provider unlock (1536-dim migration) → encrypt API key at rest (pre-prod blocker) → CORS pin → egress firewall rule (RFC-1918 + link-local, DNS rebinding defense) → Docker packaging → release.
+- **Next logical slice:** Frontend polish (design, footer with "Aryan Mittal" credit, GitHub link, provider-switch warning, OpenAI key input disabled) → decide repo visibility → tag v1.0. v1.1: OpenAI provider unlock (1536-dim migration + API key encryption).
 
 ---
 
@@ -53,6 +53,15 @@ High-level "why" for choices that shape the codebase. Newest first. An ADR is st
 ## Log
 
 Newest first. Each entry ≤10 lines. Older than ~2 weeks or no longer load-bearing: compact or delete. Promote anything that should outlive the Log into an ADR.
+
+### 2026-05-11 — Security hardening follow-up (backend + devops + extension)
+`POST /links/{id}/refetch` now requires `AdminTokenDep` — previously any caller with a UUID could trigger an outbound fetch. `requirements.txt`: `accelerate` and `respx` pinned to version ranges. `docker-compose.prod.yml`: `POSTGRES_PASSWORD` now required via `${POSTGRES_PASSWORD:?...}`; `DATABASE_URL`/`DATABASE_URL_SYNC` interpolate it. `.env.example` updated with `POSTGRES_PASSWORD`. `backend/alembic.ini`: cleared hardcoded URL (env.py override already in place). `backend/Dockerfile`: TODO comment added for gosu-based privilege-drop (deferred — iptables ordering constraint). Extension: `tabs` permission dropped; `activeTab` is sufficient and was already present.
+
+### 2026-05-11 — Pre-release security audit (security)
+Audited all surfaces before repo goes public. Fixed: `ADMIN_TOKEN: changeme` → `${ADMIN_TOKEN:?...}` sentinel in prod compose (critical); `allow_headers=["*"]` tightened to `["Content-Type", "Authorization"]` (medium); `hmac.compare_digest()` for timing-safe token comparison (low). Open pre-go-live blockers: backend container runs as root — needs `USER` directive (devops); DB password hardcoded in prod compose (devops); CORS regex not pinned to extension ID (pin after CWS submission); `POST /links/{id}/refetch` unauthenticated (backend); `tabs` permission can be narrowed to `activeTab` (extension). No CVEs in pinned deps. No secrets in tracked files.
+
+### 2026-05-11 — README v1.0 (devops)
+Replaced scaffold README with a clean v1.0: what it is, Docker-based quick start via Makefile, extension load steps, env var table (`ADMIN_TOKEN` / `CORS_ORIGIN_REGEX` / `EMBEDDING_PROVIDER` / `EMBEDDING_DIM`), Makefile command reference, first-search note about model download. Old README described manual pip/npm workflow and stub provider — both obsolete.
 
 ### 2026-05-11 — Docker prod packaging (devops)
 Added `docker-compose.prod.yml`: db (pgvector/pgvector:pg16) + backend built from `backend/Dockerfile`; `cap_add: NET_ADMIN` for iptables egress script; backend waits on db healthcheck; named volume `linkyard-prod-db-data`. Added `.env.example` documenting all runtime env vars. Added `Makefile`: `build / up / down / migrate / logs / help` (default). `CORS_ORIGIN_REGEX` defaults to dev wildcard in prod compose — must be pinned to published extension ID before Chrome Web Store go-live. `ADMIN_TOKEN` placeholder is `changeme` — must be replaced before go-live.

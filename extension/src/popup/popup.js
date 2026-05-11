@@ -15,7 +15,8 @@ optionsBtn.addEventListener("click", () => {
 });
 
 // ── On load: populate title and URL from the active tab ──────────────────────
-// chrome.tabs.query with "tabs" permission returns full tab.url and tab.title.
+// activeTab permission (granted on icon click) exposes tab.url and tab.title
+// for the current active tab without requiring the broad "tabs" permission.
 let currentTab = null;
 
 (async () => {

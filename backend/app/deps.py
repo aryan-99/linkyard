@@ -1,3 +1,4 @@
+import hmac
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, Security, status
@@ -38,7 +39,7 @@ async def _verify_admin_token(
         # Auth disabled — local dev convenience.
         return
 
-    if credentials is None or credentials.credentials != configured:
+    if credentials is None or not hmac.compare_digest(credentials.credentials, configured):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or missing admin token",

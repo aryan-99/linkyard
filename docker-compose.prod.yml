@@ -4,7 +4,7 @@ services:
     container_name: linkyard-db-prod
     environment:
       POSTGRES_USER: linkyard
-      POSTGRES_PASSWORD: linkyard
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
       POSTGRES_DB: linkyard
     volumes:
       - linkyard-prod-db-data:/var/lib/postgresql/data
@@ -29,13 +29,15 @@ services:
       - NET_ADMIN
     environment:
       # asyncpg URL used by SQLAlchemy async engine at runtime
-      DATABASE_URL: postgresql+asyncpg://linkyard:linkyard@db:5432/linkyard
+      DATABASE_URL: postgresql+asyncpg://linkyard:${POSTGRES_PASSWORD}@db:5432/linkyard
 
       # psycopg2 URL used by Alembic for synchronous migrations
-      DATABASE_URL_SYNC: postgresql://linkyard:linkyard@db:5432/linkyard
+      DATABASE_URL_SYNC: postgresql://linkyard:${POSTGRES_PASSWORD}@db:5432/linkyard
 
-      # Set to a random secret before go-live — protects /settings endpoints
-      ADMIN_TOKEN: changeme
+      # REQUIRED: set ADMIN_TOKEN in your shell or a .env file before running.
+      # Generate with: openssl rand -hex 32
+      # docker compose will refuse to start if this variable is unset or empty.
+      ADMIN_TOKEN: ${ADMIN_TOKEN:?ADMIN_TOKEN must be set (run: export ADMIN_TOKEN=$(openssl rand -hex 32))}
 
       # Set to chrome-extension://<your-extension-id> after publishing to Chrome Web Store
       # Example: chrome-extension://abcdefghijklmnopabcdefghijklmnop

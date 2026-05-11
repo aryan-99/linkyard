@@ -3,7 +3,7 @@ import uuid
 from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import func, select
 
-from app.deps import ProviderDep, SearchThresholdDep, SessionDep
+from app.deps import AdminTokenDep, ProviderDep, SearchThresholdDep, SessionDep
 from app.models.link import Link
 from app.schemas.link import (
     LinkCreate,
@@ -78,7 +78,7 @@ async def get_link(link_id: uuid.UUID, session: SessionDep) -> LinkDetailRespons
     return LinkDetailResponse.model_validate(link)
 
 
-@router.post("/{link_id}/refetch", response_model=LinkDetailResponse)
+@router.post("/{link_id}/refetch", response_model=LinkDetailResponse, dependencies=[AdminTokenDep])
 async def refetch_link(link_id: uuid.UUID, session: SessionDep, provider: ProviderDep) -> LinkDetailResponse:
     result = await session.execute(select(Link).where(Link.id == link_id))
     link = result.scalar_one_or_none()

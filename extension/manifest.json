@@ -3,7 +3,7 @@
   "name": "Linkyard",
   "version": "0.1.0",
   "description": "Save the current page to Linkyard.",
-  "permissions": ["activeTab", "storage", "tabs"],
+  "permissions": ["activeTab", "storage"],
   "host_permissions": [
     "http://localhost/*",
     "https://localhost/*",
