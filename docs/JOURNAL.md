@@ -54,6 +54,9 @@ High-level "why" for choices that shape the codebase. Newest first. An ADR is st
 
 Newest first. Each entry ≤10 lines. Older than ~2 weeks or no longer load-bearing: compact or delete. Promote anything that should outlive the Log into an ADR.
 
+### 2026-05-11 — Egress firewall + backend Dockerfile stub (devops)
+Added `scripts/block_egress_private.sh` — idempotent iptables/ip6tables script blocking outbound TCP to RFC-1918, loopback, and link-local (169.254.0.0/16) for IPv4, plus `::1` and `fc00::/7` for IPv6. Added `backend/Dockerfile` (python:3.12-slim, installs iptables, runs egress script before uvicorn). Dockerfile is a packaging stub — not wired into `docker-compose.dev.yml`. Build context must be repo root (`docker build -f backend/Dockerfile .`). Requires `CAP_NET_ADMIN` at container startup. CORS_ORIGIN_REGEX TODO placeholder in Dockerfile header. `USER nonroot` deferred until privilege-drop strategy is decided.
+
 ### 2026-05-11 — HNSW index migration (backend)
 Added `0005_hnsw_index.py`, chained to 0004. Creates HNSW index (`m=16, ef_construction=64`, `vector_cosine_ops`) on `links.embedding` to accelerate `<=>` cosine search queries. Downgrade drops the index; table and data untouched. Requires pgvector >= 0.5.0. Not built `CONCURRENTLY` — acceptable at current scale.
 
