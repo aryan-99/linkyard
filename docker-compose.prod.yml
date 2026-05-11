@@ -1,0 +1,49 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: linkyard-db-prod
+    environment:
+      POSTGRES_USER: linkyard
+      POSTGRES_PASSWORD: linkyard
+      POSTGRES_DB: linkyard
+    volumes:
+      - linkyard-prod-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U linkyard -d linkyard"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: linkyard-backend-prod
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    cap_add:
+      - NET_ADMIN
+    environment:
+      # asyncpg URL used by SQLAlchemy async engine at runtime
+      DATABASE_URL: postgresql+asyncpg://linkyard:linkyard@db:5432/linkyard
+
+      # psycopg2 URL used by Alembic for synchronous migrations
+      DATABASE_URL_SYNC: postgresql://linkyard:linkyard@db:5432/linkyard
+
+      # Set to a random secret before go-live — protects /settings endpoints
+      ADMIN_TOKEN: changeme
+
+      # Set to chrome-extension://<your-extension-id> after publishing to Chrome Web Store
+      # Example: chrome-extension://abcdefghijklmnopabcdefghijklmnop
+      CORS_ORIGIN_REGEX: "chrome-extension://[a-p]{32}"
+
+      EMBEDDING_PROVIDER: local
+      EMBEDDING_DIM: 384
+    restart: unless-stopped
+
+volumes:
+  linkyard-prod-db-data:
