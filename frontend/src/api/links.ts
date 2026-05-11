@@ -3,6 +3,7 @@ export interface LinkResponse {
   url: string;
   title: string | null;
   snippet: string | null;
+  page_body_preview: string | null;
   source: string;
   created_at: string;
   updated_at: string;
@@ -44,4 +45,8 @@ export function listLinks(
 
 export function deleteLink(id: string): Promise<void> {
   return request<void>(`/links/${id}`, { method: "DELETE" });
+}
+
+export function refetchLink(id: string): Promise<LinkDetailResponse> {
+  return request<LinkDetailResponse>(`/links/${id}/refetch`, { method: "POST" });
 }

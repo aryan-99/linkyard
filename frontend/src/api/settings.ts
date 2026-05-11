@@ -28,3 +28,10 @@ export function triggerReembed(): Promise<{ reembedded: number }> {
     method: "POST",
   });
 }
+
+export function refetchAllLinks(force: boolean): Promise<{ refetched: number }> {
+  return request<{ refetched: number }>("/settings/refetch", {
+    method: "POST",
+    body: JSON.stringify({ force }),
+  });
+}

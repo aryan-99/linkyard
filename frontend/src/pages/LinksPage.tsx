@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import AddLinkForm from "../components/AddLinkForm";
-import { deleteLink, listLinks, type LinkDetailResponse, type LinkResponse } from "../api/links";
+import {
+  deleteLink,
+  listLinks,
+  refetchLink,
+  type LinkDetailResponse,
+  type LinkResponse,
+} from "../api/links";
 
 const PAGE_SIZE = 20;
 
@@ -12,6 +18,7 @@ export default function LinksPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [refreshHovered, setRefreshHovered] = useState(false);
 
   async function fetchLinks(currentOffset: number, append: boolean) {
     try {
@@ -58,6 +65,10 @@ export default function LinksPage() {
     }
   }
 
+  function handleRefetched(updated: LinkDetailResponse) {
+    setItems((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
+  }
+
   return (
     <div style={styles.page}>
       <AddLinkForm onCreated={handleCreated} />
@@ -67,15 +78,23 @@ export default function LinksPage() {
           <h2 style={styles.sectionHeading}>
             Saved links{total > 0 && <span style={styles.count}> ({total})</span>}
           </h2>
-          <button
-            onClick={handleRefresh}
-            disabled={refreshing || loading}
-            style={styles.refreshBtn}
-            title="Refresh"
-            aria-label="Refresh links"
+          <span
+            style={styles.tooltipWrap}
+            onMouseEnter={() => setRefreshHovered(true)}
+            onMouseLeave={() => setRefreshHovered(false)}
           >
-            {refreshing ? "↻" : "↻"}
-          </button>
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing || loading}
+              style={styles.refreshBtn}
+              aria-label="Refresh links"
+            >
+              {refreshing ? "↻" : "↻"}
+            </button>
+            {refreshHovered && !refreshing && (
+              <span style={styles.tooltip}>Refresh</span>
+            )}
+          </span>
         </div>
 
         {loading && <p style={styles.muted}>Loading…</p>}
@@ -87,7 +106,12 @@ export default function LinksPage() {
 
         <ul style={styles.list}>
           {items.map((link) => (
-            <LinkRow key={link.id} link={link} onDelete={handleDelete} />
+            <LinkRow
+              key={link.id}
+              link={link}
+              onDelete={handleDelete}
+              onRefetched={handleRefetched}
+            />
           ))}
         </ul>
 
@@ -110,10 +134,31 @@ export default function LinksPage() {
 interface LinkRowProps {
   link: LinkResponse;
   onDelete: (id: string) => void;
+  onRefetched: (updated: LinkDetailResponse) => void;
 }
 
-function LinkRow({ link, onDelete }: LinkRowProps) {
+function LinkRow({ link, onDelete, onRefetched }: LinkRowProps) {
   const [hovered, setHovered] = useState(false);
+  const [btnHovered, setBtnHovered] = useState(false);
+  const [deleteHovered, setDeleteHovered] = useState(false);
+  const [refetching, setRefetching] = useState(false);
+  const [refetchDone, setRefetchDone] = useState(false);
+
+  async function handleRefetch() {
+    if (refetching) return;
+    setRefetching(true);
+    setRefetchDone(false);
+    try {
+      const updated = await refetchLink(link.id);
+      onRefetched(updated);
+      setRefetchDone(true);
+      setTimeout(() => setRefetchDone(false), 2000);
+    } catch {
+      // silently ignore — could add error state here if desired
+    } finally {
+      setRefetching(false);
+    }
+  }
 
   const itemStyle: React.CSSProperties = {
     display: "flex",
@@ -138,6 +183,23 @@ function LinkRow({ link, onDelete }: LinkRowProps) {
     lineHeight: 1,
   };
 
+  const refetchBtnStyle: React.CSSProperties = {
+    flexShrink: 0,
+    background: "none",
+    border: "none",
+    color: hovered
+      ? refetchDone
+        ? "var(--color-success)"
+        : "var(--color-text-muted)"
+      : "transparent",
+    cursor: refetching ? "not-allowed" : "pointer",
+    fontSize: 14,
+    padding: "2px 4px",
+    transition: "color 0.12s",
+    lineHeight: 1,
+    opacity: refetching ? 0.5 : 1,
+  };
+
   return (
     <li
       style={itemStyle}
@@ -157,21 +219,59 @@ function LinkRow({ link, onDelete }: LinkRowProps) {
           <span style={styles.itemUrl}>{link.url}</span>
         )}
         {link.snippet && (
-          <p style={styles.itemSnippet}>{link.snippet}</p>
+          <p style={styles.itemSnippet}>
+            <span style={styles.itemFieldLabel}>Note: </span>{link.snippet}
+          </p>
+        )}
+        {link.page_body_preview && (
+          <p style={styles.itemBodyPreview}>
+            <span style={styles.itemFieldLabel}>Extracted: </span>{link.page_body_preview}
+          </p>
         )}
         <span style={styles.itemMeta}>
           {new Date(link.created_at).toLocaleDateString()} · {link.source}
         </span>
       </div>
-      <button
-        onClick={() => onDelete(link.id)}
-        style={deleteBtnStyle}
-        title="Delete"
-        aria-label="Delete link"
-        tabIndex={hovered ? 0 : -1}
+
+      {/* Re-fetch button */}
+      <span
+        style={styles.tooltipWrap}
+        onMouseEnter={() => setBtnHovered(true)}
+        onMouseLeave={() => setBtnHovered(false)}
       >
-        ✕
-      </button>
+        <button
+          onClick={handleRefetch}
+          disabled={refetching}
+          style={refetchBtnStyle}
+          title="Re-fetch page content"
+          aria-label="Re-fetch page content"
+          tabIndex={hovered ? 0 : -1}
+        >
+          {refetchDone ? "✓" : "⟳"}
+        </button>
+        {btnHovered && !refetching && !refetchDone && (
+          <span style={styles.tooltip}>Re-fetch page content</span>
+        )}
+      </span>
+
+      {/* Delete button */}
+      <span
+        style={styles.tooltipWrap}
+        onMouseEnter={() => setDeleteHovered(true)}
+        onMouseLeave={() => setDeleteHovered(false)}
+      >
+        <button
+          onClick={() => onDelete(link.id)}
+          style={deleteBtnStyle}
+          aria-label="Delete link"
+          tabIndex={hovered ? 0 : -1}
+        >
+          ✕
+        </button>
+        {deleteHovered && (
+          <span style={styles.tooltip}>Delete</span>
+        )}
+      </span>
     </li>
   );
 }
@@ -233,10 +333,29 @@ const styles: Record<string, React.CSSProperties> = {
     whiteSpace: "nowrap",
     marginTop: 2,
   },
+  itemFieldLabel: {
+    fontSize: 11,
+    fontWeight: 600,
+    textTransform: "uppercase" as const,
+    letterSpacing: "0.04em",
+    color: "var(--color-text-muted)",
+    marginRight: 2,
+  },
   itemSnippet: {
     margin: "4px 0 0",
     fontSize: 13,
     color: "var(--color-text-secondary)",
+  },
+  itemBodyPreview: {
+    margin: "4px 0 0",
+    fontSize: 12,
+    color: "var(--color-text-muted)",
+    overflow: "hidden",
+    display: "-webkit-box",
+    // reason: non-standard CSS property required for line-clamp
+    WebkitLineClamp: 2,
+    WebkitBoxOrient: "vertical",
+    lineHeight: 1.4,
   },
   itemMeta: {
     fontSize: 11,
@@ -253,5 +372,24 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 14,
     cursor: "pointer",
     color: "var(--color-text-secondary)",
+  },
+  tooltipWrap: {
+    position: "relative",
+    flexShrink: 0,
+    display: "inline-flex",
+    alignItems: "center",
+  },
+  tooltip: {
+    position: "absolute",
+    bottom: "calc(100% + 4px)",
+    right: 0,
+    background: "var(--color-text-primary)",
+    color: "var(--color-bg)",
+    fontSize: 11,
+    padding: "3px 7px",
+    borderRadius: 4,
+    whiteSpace: "nowrap",
+    pointerEvents: "none",
+    zIndex: 10,
   },
 };

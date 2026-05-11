@@ -20,6 +20,7 @@ class Link(Base):
     title: Mapped[str | None] = mapped_column(Text, nullable=True)
     snippet: Mapped[str | None] = mapped_column(Text, nullable=True)
     meta_description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    page_body: Mapped[str | None] = mapped_column(Text, nullable=True)
     source: Mapped[str] = mapped_column(Text, nullable=False)
     embedding: Mapped[list[float] | None] = mapped_column(
         Vector(settings.embedding_dim), nullable=True
@@ -30,3 +31,4 @@ class Link(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
+

@@ -27,7 +27,7 @@ class LocalProvider(EmbeddingProvider):
             self._model = SentenceTransformer(
                 self._model_name,
                 device="cpu",
-                model_kwargs={"device_map": None},
+                model_kwargs={"device_map": "cpu"},
             )
 
     @property

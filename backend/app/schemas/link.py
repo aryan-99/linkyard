@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, HttpUrl, field_validator
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, computed_field, field_validator
 
 
 class LinkCreate(BaseModel):
@@ -32,9 +32,15 @@ class LinkResponse(BaseModel):
     url: str
     title: str | None
     snippet: str | None
+    page_body: str | None = Field(default=None, exclude=True)
     source: str
     created_at: datetime
     updated_at: datetime
+
+    @computed_field
+    @property
+    def page_body_preview(self) -> str | None:
+        return self.page_body[:150] if self.page_body else None
 
 
 class LinkDetailResponse(LinkResponse):

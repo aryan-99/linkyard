@@ -17,6 +17,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from unittest.mock import AsyncMock, patch
 
 from app.db import Base, get_session
 from app.main import app
@@ -69,3 +70,13 @@ async def client(session_factory):
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
     app.dependency_overrides.clear()
+
+
+@pytest.fixture(autouse=True)
+async def suppress_page_fetch():
+    """Prevent live HTTP fetches during integration tests."""
+    with patch(
+        "app.services.ingest._fetch_page_body",
+        new=AsyncMock(return_value=(None, None)),
+    ):
+        yield

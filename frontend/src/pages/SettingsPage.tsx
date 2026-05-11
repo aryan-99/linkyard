@@ -3,9 +3,102 @@ import {
   getSettings,
   updateSettings,
   triggerReembed,
+  refetchAllLinks,
   type AppSettings,
 } from "../api/settings";
 import { setAuthToken } from "../api/client";
+
+/* ─── ConfirmDialog (co-located, only used in this page) ──────────────────── */
+
+interface ConfirmDialogProps {
+  title: string;
+  children: React.ReactNode;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+function ConfirmDialog({ title, children, onConfirm, onCancel }: ConfirmDialogProps) {
+  return (
+    <div style={dialogStyles.backdrop} onClick={onCancel}>
+      <div
+        style={dialogStyles.card}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="confirm-dialog-title"
+      >
+        <h3 id="confirm-dialog-title" style={dialogStyles.title}>{title}</h3>
+        <div style={dialogStyles.body}>{children}</div>
+        <div style={dialogStyles.actions}>
+          <button onClick={onCancel} style={dialogStyles.cancelBtn}>Cancel</button>
+          <button onClick={onConfirm} style={dialogStyles.confirmBtn}>Confirm</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const dialogStyles: Record<string, React.CSSProperties> = {
+  backdrop: {
+    position: "fixed",
+    inset: 0,
+    background: "rgba(0,0,0,0.4)",
+    zIndex: 100,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  card: {
+    background: "var(--color-bg)",
+    border: "1px solid var(--color-border)",
+    borderRadius: 10,
+    padding: "24px 28px",
+    maxWidth: 440,
+    width: "calc(100% - 32px)",
+    boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+  },
+  title: {
+    margin: "0 0 12px",
+    fontSize: 16,
+    fontWeight: 600,
+    color: "var(--color-text-primary)",
+  },
+  body: {
+    fontSize: 14,
+    color: "var(--color-text-secondary)",
+    lineHeight: 1.55,
+    marginBottom: 20,
+  },
+  actions: {
+    display: "flex",
+    justifyContent: "flex-end",
+    gap: 10,
+  },
+  cancelBtn: {
+    padding: "8px 18px",
+    fontSize: 14,
+    fontWeight: 500,
+    background: "var(--color-surface)",
+    color: "var(--color-text-secondary)",
+    border: "1px solid var(--color-border)",
+    borderRadius: 6,
+    cursor: "pointer",
+    fontFamily: "inherit",
+  },
+  confirmBtn: {
+    padding: "8px 18px",
+    fontSize: 14,
+    fontWeight: 500,
+    background: "var(--color-accent)",
+    color: "var(--color-btn-primary-text, #ffffff)",
+    border: "none",
+    borderRadius: 6,
+    cursor: "pointer",
+    fontFamily: "inherit",
+  },
+};
+
+/* ─── SettingsPage ────────────────────────────────────────────────────────── */
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<AppSettings | null>(null);
@@ -27,6 +120,14 @@ export default function SettingsPage() {
   const [reembedding, setReembedding] = useState(false);
   const [reembedResult, setReembedResult] = useState<string | null>(null);
   const [reembedError, setReembedError] = useState<string | null>(null);
+  const [showReembedConfirm, setShowReembedConfirm] = useState(false);
+
+  // Re-fetch state
+  const [refetching, setRefetching] = useState(false);
+  const [refetchResult, setRefetchResult] = useState<string | null>(null);
+  const [refetchError, setRefetchError] = useState<string | null>(null);
+  const [showRefetchConfirm, setShowRefetchConfirm] = useState(false);
+  const [refetchForce, setRefetchForce] = useState(false);
 
   // Load persisted admin token on mount
   useEffect(() => {
@@ -115,17 +216,34 @@ export default function SettingsPage() {
   }
 
   async function handleReembed() {
+    setShowReembedConfirm(false);
     setReembedding(true);
     setReembedResult(null);
     setReembedError(null);
 
     try {
       const res = await triggerReembed();
-      setReembedResult(`Re-embedded ${res.reembedded} link${res.reembedded !== 1 ? "s" : ""}`);
+      setReembedResult(`Re-embedded ${res.reembedded} link${res.reembedded !== 1 ? "s" : ""}.`);
     } catch (err) {
       setReembedError(err instanceof Error ? err.message : "Re-embed failed");
     } finally {
       setReembedding(false);
+    }
+  }
+
+  async function handleRefetchAll() {
+    setShowRefetchConfirm(false);
+    setRefetching(true);
+    setRefetchResult(null);
+    setRefetchError(null);
+
+    try {
+      const res = await refetchAllLinks(refetchForce);
+      setRefetchResult(`Re-fetched ${res.refetched} link${res.refetched !== 1 ? "s" : ""}.`);
+    } catch (err) {
+      setRefetchError(err instanceof Error ? err.message : "Re-fetch failed");
+    } finally {
+      setRefetching(false);
     }
   }
 
@@ -140,6 +258,41 @@ export default function SettingsPage() {
   return (
     <div style={styles.page}>
       <h1 style={styles.pageTitle}>Settings</h1>
+
+      {/* ── Re-embed confirm dialog ── */}
+      {showReembedConfirm && (
+        <ConfirmDialog
+          title="Re-embed all links"
+          onConfirm={handleReembed}
+          onCancel={() => setShowReembedConfirm(false)}
+        >
+          This will re-embed all saved links using their stored content. Links without fetched page
+          content will use title and snippet only. Continue?
+        </ConfirmDialog>
+      )}
+
+      {/* ── Re-fetch confirm dialog ── */}
+      {showRefetchConfirm && (
+        <ConfirmDialog
+          title="Re-fetch page content"
+          onConfirm={handleRefetchAll}
+          onCancel={() => setShowRefetchConfirm(false)}
+        >
+          <p style={{ margin: "0 0 12px" }}>
+            By default, only links where no page content has been captured yet will be fetched. Check
+            the box below to re-fetch all links, including those already indexed.
+          </p>
+          <label style={dialogStyles.checkboxLabel}>
+            <input
+              type="checkbox"
+              checked={refetchForce}
+              onChange={(e) => setRefetchForce(e.target.checked)}
+              style={{ marginRight: 8 }}
+            />
+            Re-fetch all links, including those already indexed
+          </label>
+        </ConfirmDialog>
+      )}
 
       <section style={styles.section}>
         <h2 style={styles.sectionTitle}>Admin Token</h2>
@@ -272,6 +425,7 @@ export default function SettingsPage() {
             {saveSuccess && <span style={styles.success}>Saved</span>}
             {saveError && <span style={styles.error}>{saveError}</span>}
           </div>
+
           <section style={{ ...styles.section, marginTop: 32 }}>
             <h2 style={styles.sectionTitle}>Re-embed Existing Links</h2>
             <p style={styles.hint}>
@@ -280,7 +434,7 @@ export default function SettingsPage() {
             </p>
 
             <button
-              onClick={handleReembed}
+              onClick={() => setShowReembedConfirm(true)}
               disabled={reembedding}
               style={reembedding ? { ...styles.secondaryBtn, ...styles.secondaryBtnDisabled } : styles.secondaryBtn}
             >
@@ -289,6 +443,28 @@ export default function SettingsPage() {
 
             {reembedResult && <p style={styles.success}>{reembedResult}</p>}
             {reembedError && <p style={styles.error}>{reembedError}</p>}
+          </section>
+
+          <section style={{ ...styles.section, marginTop: 16 }}>
+            <h2 style={styles.sectionTitle}>Re-fetch Page Content</h2>
+            <p style={styles.hint}>
+              Re-fetches page body content from the source URL and re-embeds the link. By default,
+              only links where no content has been captured yet are fetched.
+            </p>
+
+            <button
+              onClick={() => {
+                setRefetchForce(false);
+                setShowRefetchConfirm(true);
+              }}
+              disabled={refetching}
+              style={refetching ? { ...styles.secondaryBtn, ...styles.secondaryBtnDisabled } : styles.secondaryBtn}
+            >
+              {refetching ? "Re-fetching…" : "Re-fetch all"}
+            </button>
+
+            {refetchResult && <p style={styles.success}>{refetchResult}</p>}
+            {refetchError && <p style={styles.error}>{refetchError}</p>}
           </section>
         </>
       )}
@@ -431,3 +607,13 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 14,
   },
 };
+
+// Augment dialogStyles with the checkbox label (needs to live with dialogStyles for co-location)
+dialogStyles.checkboxLabel = {
+  display: "flex",
+  alignItems: "flex-start",
+  fontSize: 13,
+  color: "var(--color-text-secondary)",
+  cursor: "pointer",
+  lineHeight: 1.5,
+} as React.CSSProperties;

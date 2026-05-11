@@ -14,7 +14,7 @@ from app.schemas.link import (
     SearchResultItem,
     SearchResultsResponse,
 )
-from app.services.ingest import ingest_link
+from app.services.ingest import _fetch_page_body, ingest_link, text_for_embedding
 from app.services.search import search_links
 
 router = APIRouter()
@@ -75,6 +75,24 @@ async def get_link(link_id: uuid.UUID, session: SessionDep) -> LinkDetailRespons
     link = result.scalar_one_or_none()
     if link is None:
         raise HTTPException(status_code=404, detail="Link not found")
+    return LinkDetailResponse.model_validate(link)
+
+
+@router.post("/{link_id}/refetch", response_model=LinkDetailResponse)
+async def refetch_link(link_id: uuid.UUID, session: SessionDep, provider: ProviderDep) -> LinkDetailResponse:
+    result = await session.execute(select(Link).where(Link.id == link_id))
+    link = result.scalar_one_or_none()
+    if link is None:
+        raise HTTPException(status_code=404, detail="Link not found")
+    page_body, fetched_meta = await _fetch_page_body(str(link.url))
+    effective_meta = link.meta_description or fetched_meta
+    link.page_body = page_body
+    link.meta_description = effective_meta
+    link.embedding = await provider.embed(
+        text_for_embedding(link.title, link.snippet, page_body, effective_meta)
+    )
+    await session.commit()
+    await session.refresh(link)
     return LinkDetailResponse.model_validate(link)
 
 
