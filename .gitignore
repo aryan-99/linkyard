@@ -27,6 +27,13 @@ dist/
 # Extension build output
 extension/dist/
 
+# tsc compiled output emitted alongside TypeScript source files
+frontend/src/**/*.js
+frontend/src/**/*.js.map
+
+# Extension release zip (build artifact — don't version binary blobs)
+*.zip
+
 # Claude Code local (user-specific) settings
 .claude/settings.local.json
 .claude/
