@@ -2,6 +2,7 @@ import { useState } from "react";
 import LinksPage from "./pages/LinksPage";
 import SearchPage from "./pages/SearchPage";
 import SettingsPage from "./pages/SettingsPage";
+import { Footer } from "./components/Footer";
 
 type Tab = "links" | "search" | "settings";
 
@@ -49,7 +50,14 @@ export default function App() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--color-bg)" }}>
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "var(--color-bg)",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
       <nav style={navStyle}>
         <span style={brandStyle}>Linkyard</span>
         <div style={tabGroupStyle}>
@@ -76,9 +84,14 @@ export default function App() {
           </button>
         </div>
       </nav>
-      {tab === "links" && <LinksPage />}
-      {tab === "search" && <SearchPage />}
-      {tab === "settings" && <SettingsPage />}
+
+      <main style={{ flex: 1 }}>
+        {tab === "links" && <LinksPage />}
+        {tab === "search" && <SearchPage />}
+        {tab === "settings" && <SettingsPage />}
+      </main>
+
+      <Footer />
     </div>
   );
 }

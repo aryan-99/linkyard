@@ -89,9 +89,9 @@ const dialogStyles: Record<string, React.CSSProperties> = {
     padding: "8px 18px",
     fontSize: 14,
     fontWeight: 500,
-    background: "var(--color-accent)",
-    color: "var(--color-btn-primary-text, #ffffff)",
-    border: "none",
+    background: "transparent",
+    color: "var(--color-accent)",
+    border: "1.5px solid var(--color-accent)",
     borderRadius: 6,
     cursor: "pointer",
     fontFamily: "inherit",
@@ -341,9 +341,23 @@ export default function SettingsPage() {
               <option value="local">Local (no API key)</option>
               <option value="stub">Stub (testing only)</option>
               <option value="openai" disabled>
-                OpenAI (coming soon)
+                OpenAI — coming soon
               </option>
             </select>
+
+            {/* Coming-soon notice — always visible so users know OpenAI isn't functional yet */}
+            <p style={styles.comingSoonNote}>
+              <strong>OpenAI provider is not yet available.</strong> Only Local and Stub are
+              functional. OpenAI support (1536-dim, text-embedding-3-small) is planned for v1.1.
+            </p>
+
+            {/* Warn when the dropdown value differs from the last-saved value */}
+            {settings.embedding_provider !== provider && (
+              <p style={styles.providerWarning}>
+                Changing the embedding provider requires a full re-embed of all links. Use
+                "Re-embed all links" below after saving.
+              </p>
+            )}
 
             {provider === "local" && (
               <p style={styles.hint}>
@@ -535,6 +549,27 @@ const styles: Record<string, React.CSSProperties> = {
     margin: "8px 0 0",
     lineHeight: 1.5,
   },
+  comingSoonNote: {
+    fontSize: 12,
+    color: "var(--color-text-muted)",
+    background: "var(--color-accent-tint)",
+    border: "1px solid var(--color-border)",
+    borderRadius: 4,
+    padding: "7px 10px",
+    margin: "10px 0 0",
+    lineHeight: 1.5,
+  },
+  providerWarning: {
+    fontSize: 13,
+    fontWeight: 500,
+    color: "var(--color-warning)",
+    background: "var(--color-warning-tint)",
+    border: "1px solid var(--color-warning)",
+    borderRadius: 4,
+    padding: "8px 10px",
+    margin: "8px 0 0",
+    lineHeight: 1.5,
+  },
   keyConfigured: {
     display: "flex",
     alignItems: "center",
@@ -564,9 +599,9 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "9px 20px",
     fontSize: 14,
     fontWeight: 500,
-    background: "var(--color-accent)",
-    color: "var(--color-btn-primary-text, #ffffff)",
-    border: "none",
+    background: "transparent",
+    color: "var(--color-accent)",
+    border: "1.5px solid var(--color-accent)",
     borderRadius: 6,
     cursor: "pointer",
     fontFamily: "inherit",

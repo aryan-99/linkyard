@@ -318,7 +318,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: "block",
     fontWeight: 500,
     fontSize: 15,
-    color: "var(--color-text-primary)",
+    color: "var(--color-accent)",
     textDecoration: "none",
     overflow: "hidden",
     textOverflow: "ellipsis",

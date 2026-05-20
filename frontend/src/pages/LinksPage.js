@@ -1,0 +1,239 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { useEffect, useState } from "react";
+import AddLinkForm from "../components/AddLinkForm";
+import { deleteLink, listLinks, refetchLink, } from "../api/links";
+const PAGE_SIZE = 20;
+export default function LinksPage() {
+    const [items, setItems] = useState([]);
+    const [total, setTotal] = useState(0);
+    const [offset, setOffset] = useState(0);
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const [error, setError] = useState(null);
+    const [refreshHovered, setRefreshHovered] = useState(false);
+    async function fetchLinks(currentOffset, append) {
+        try {
+            const data = await listLinks(PAGE_SIZE, currentOffset);
+            setTotal(data.pagination.total);
+            setItems((prev) => (append ? [...prev, ...data.items] : data.items));
+        }
+        catch (err) {
+            setError(err instanceof Error ? err.message : "Failed to load links");
+        }
+    }
+    useEffect(() => {
+        setLoading(true);
+        fetchLinks(0, false).finally(() => setLoading(false));
+    }, []);
+    async function handleRefresh() {
+        setRefreshing(true);
+        setOffset(0);
+        await fetchLinks(0, false);
+        setRefreshing(false);
+    }
+    async function handleLoadMore() {
+        const nextOffset = offset + PAGE_SIZE;
+        setLoadingMore(true);
+        await fetchLinks(nextOffset, true);
+        setOffset(nextOffset);
+        setLoadingMore(false);
+    }
+    function handleCreated(link) {
+        setItems((prev) => [link, ...prev]);
+        setTotal((t) => t + 1);
+    }
+    async function handleDelete(id) {
+        try {
+            await deleteLink(id);
+            setItems((prev) => prev.filter((l) => l.id !== id));
+            setTotal((t) => t - 1);
+        }
+        catch (err) {
+            alert(err instanceof Error ? err.message : "Failed to delete link");
+        }
+    }
+    function handleRefetched(updated) {
+        setItems((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
+    }
+    return (_jsxs("div", { style: styles.page, children: [_jsx(AddLinkForm, { onCreated: handleCreated }), _jsxs("section", { children: [_jsxs("div", { style: styles.sectionHeader, children: [_jsxs("h2", { style: styles.sectionHeading, children: ["Saved links", total > 0 && _jsxs("span", { style: styles.count, children: [" (", total, ")"] })] }), _jsxs("span", { style: styles.tooltipWrap, onMouseEnter: () => setRefreshHovered(true), onMouseLeave: () => setRefreshHovered(false), children: [_jsx("button", { onClick: handleRefresh, disabled: refreshing || loading, style: styles.refreshBtn, "aria-label": "Refresh links", children: refreshing ? "↻" : "↻" }), refreshHovered && !refreshing && (_jsx("span", { style: styles.tooltip, children: "Refresh" }))] })] }), loading && _jsx("p", { style: styles.muted, children: "Loading\u2026" }), error && _jsx("p", { style: styles.error, children: error }), !loading && items.length === 0 && (_jsx("p", { style: styles.muted, children: "No links saved yet. Add one above." })), _jsx("ul", { style: styles.list, children: items.map((link) => (_jsx(LinkRow, { link: link, onDelete: handleDelete, onRefetched: handleRefetched }, link.id))) }), items.length < total && (_jsx("button", { onClick: handleLoadMore, disabled: loadingMore, style: styles.loadMore, children: loadingMore ? "Loading…" : "Load more" }))] })] }));
+}
+function LinkRow({ link, onDelete, onRefetched }) {
+    const [hovered, setHovered] = useState(false);
+    const [btnHovered, setBtnHovered] = useState(false);
+    const [deleteHovered, setDeleteHovered] = useState(false);
+    const [refetching, setRefetching] = useState(false);
+    const [refetchDone, setRefetchDone] = useState(false);
+    async function handleRefetch() {
+        if (refetching)
+            return;
+        setRefetching(true);
+        setRefetchDone(false);
+        try {
+            const updated = await refetchLink(link.id);
+            onRefetched(updated);
+            setRefetchDone(true);
+            setTimeout(() => setRefetchDone(false), 2000);
+        }
+        catch {
+            // silently ignore — could add error state here if desired
+        }
+        finally {
+            setRefetching(false);
+        }
+    }
+    const itemStyle = {
+        display: "flex",
+        alignItems: "flex-start",
+        gap: 12,
+        padding: "12px 8px",
+        borderBottom: "1px solid var(--color-border)",
+        borderRadius: 4,
+        background: hovered ? "var(--color-hover-bg)" : "transparent",
+        transition: "background 0.12s",
+    };
+    const deleteBtnStyle = {
+        flexShrink: 0,
+        background: "none",
+        border: "none",
+        color: hovered ? "var(--color-error)" : "transparent",
+        cursor: "pointer",
+        fontSize: 14,
+        padding: "2px 4px",
+        transition: "color 0.12s",
+        lineHeight: 1,
+    };
+    const refetchBtnStyle = {
+        flexShrink: 0,
+        background: "none",
+        border: "none",
+        color: hovered
+            ? refetchDone
+                ? "var(--color-success)"
+                : "var(--color-text-muted)"
+            : "transparent",
+        cursor: refetching ? "not-allowed" : "pointer",
+        fontSize: 14,
+        padding: "2px 4px",
+        transition: "color 0.12s",
+        lineHeight: 1,
+        opacity: refetching ? 0.5 : 1,
+    };
+    return (_jsxs("li", { style: itemStyle, onMouseEnter: () => setHovered(true), onMouseLeave: () => setHovered(false), children: [_jsxs("div", { style: styles.itemMain, children: [_jsx("a", { href: link.url, target: "_blank", rel: "noopener noreferrer", style: styles.itemTitle, children: link.title ?? link.url }), link.title && (_jsx("span", { style: styles.itemUrl, children: link.url })), link.snippet && (_jsxs("p", { style: styles.itemSnippet, children: [_jsx("span", { style: styles.itemFieldLabel, children: "Note: " }), link.snippet] })), link.page_body_preview && (_jsxs("p", { style: styles.itemBodyPreview, children: [_jsx("span", { style: styles.itemFieldLabel, children: "Extracted: " }), link.page_body_preview] })), _jsxs("span", { style: styles.itemMeta, children: [new Date(link.created_at).toLocaleDateString(), " \u00B7 ", link.source] })] }), _jsxs("span", { style: styles.tooltipWrap, onMouseEnter: () => setBtnHovered(true), onMouseLeave: () => setBtnHovered(false), children: [_jsx("button", { onClick: handleRefetch, disabled: refetching, style: refetchBtnStyle, title: "Re-fetch page content", "aria-label": "Re-fetch page content", tabIndex: hovered ? 0 : -1, children: refetchDone ? "✓" : "⟳" }), btnHovered && !refetching && !refetchDone && (_jsx("span", { style: styles.tooltip, children: "Re-fetch page content" }))] }), _jsxs("span", { style: styles.tooltipWrap, onMouseEnter: () => setDeleteHovered(true), onMouseLeave: () => setDeleteHovered(false), children: [_jsx("button", { onClick: () => onDelete(link.id), style: deleteBtnStyle, "aria-label": "Delete link", tabIndex: hovered ? 0 : -1, children: "\u2715" }), deleteHovered && (_jsx("span", { style: styles.tooltip, children: "Delete" }))] })] }));
+}
+/* ─── Styles ──────────────────────────────────────────────────────────────── */
+const styles = {
+    page: {
+        maxWidth: 680,
+        margin: "0 auto",
+        padding: "32px 16px",
+    },
+    sectionHeader: {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginBottom: 12,
+    },
+    sectionHeading: {
+        fontSize: 15,
+        fontWeight: 600,
+        margin: 0,
+        color: "var(--color-text-primary)",
+    },
+    refreshBtn: {
+        background: "none",
+        border: "none",
+        color: "var(--color-text-muted)",
+        cursor: "pointer",
+        fontSize: 18,
+        lineHeight: 1,
+        padding: "2px 4px",
+        borderRadius: 4,
+    },
+    count: {
+        fontWeight: 400,
+        color: "var(--color-text-muted)",
+    },
+    muted: { color: "var(--color-text-muted)", fontSize: 14 },
+    error: { color: "var(--color-error)", fontSize: 14 },
+    list: { listStyle: "none", padding: 0, margin: 0 },
+    itemMain: { flex: 1, minWidth: 0 },
+    itemTitle: {
+        display: "block",
+        fontWeight: 500,
+        fontSize: 15,
+        color: "var(--color-accent)",
+        textDecoration: "none",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap",
+    },
+    itemUrl: {
+        display: "block",
+        fontSize: 12,
+        color: "var(--color-text-muted)",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap",
+        marginTop: 2,
+    },
+    itemFieldLabel: {
+        fontSize: 11,
+        fontWeight: 600,
+        textTransform: "uppercase",
+        letterSpacing: "0.04em",
+        color: "var(--color-text-muted)",
+        marginRight: 2,
+    },
+    itemSnippet: {
+        margin: "4px 0 0",
+        fontSize: 13,
+        color: "var(--color-text-secondary)",
+    },
+    itemBodyPreview: {
+        margin: "4px 0 0",
+        fontSize: 12,
+        color: "var(--color-text-muted)",
+        overflow: "hidden",
+        display: "-webkit-box",
+        // reason: non-standard CSS property required for line-clamp
+        WebkitLineClamp: 2,
+        WebkitBoxOrient: "vertical",
+        lineHeight: 1.4,
+    },
+    itemMeta: {
+        fontSize: 11,
+        color: "var(--color-text-muted)",
+        marginTop: 4,
+        display: "block",
+    },
+    loadMore: {
+        marginTop: 16,
+        padding: "8px 20px",
+        background: "var(--color-surface)",
+        border: "1px solid var(--color-border)",
+        borderRadius: 4,
+        fontSize: 14,
+        cursor: "pointer",
+        color: "var(--color-text-secondary)",
+    },
+    tooltipWrap: {
+        position: "relative",
+        flexShrink: 0,
+        display: "inline-flex",
+        alignItems: "center",
+    },
+    tooltip: {
+        position: "absolute",
+        bottom: "calc(100% + 4px)",
+        right: 0,
+        background: "var(--color-text-primary)",
+        color: "var(--color-bg)",
+        fontSize: 11,
+        padding: "3px 7px",
+        borderRadius: 4,
+        whiteSpace: "nowrap",
+        pointerEvents: "none",
+        zIndex: 10,
+    },
+};

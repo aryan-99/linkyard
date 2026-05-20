@@ -119,7 +119,6 @@ const styles: Record<string, React.CSSProperties> = {
     background: "var(--color-surface)",
     color: "var(--color-text-primary)",
     fontFamily: "inherit",
-    outline: "none",
     marginBottom: 16,
   },
   muted: { color: "var(--color-text-muted)", fontSize: 14 },
@@ -134,7 +133,7 @@ const styles: Record<string, React.CSSProperties> = {
   itemTitle: {
     fontWeight: 600,
     fontSize: 15,
-    color: "var(--color-text-primary)",
+    color: "var(--color-accent)",
     textDecoration: "none",
     overflow: "hidden",
     textOverflow: "ellipsis",

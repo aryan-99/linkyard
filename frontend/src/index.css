@@ -25,6 +25,8 @@ body {
   --color-accent-tint: #eff4ff;
   --color-error: #cc0000;
   --color-success: #16a34a;
+  --color-warning: #d97706;
+  --color-warning-tint: #fffbeb;
   --color-hover-bg: #f0f4ff;
   --color-btn-primary-text: #ffffff;
 }
@@ -42,6 +44,8 @@ body {
     --color-accent-tint: #1e2d4a;
     --color-error: #f87171;
     --color-success: #4ade80;
+    --color-warning: #f59e0b;
+    --color-warning-tint: #1f1400;
     --color-hover-bg: #1e2533;
     --color-btn-primary-text: #ffffff;
   }
