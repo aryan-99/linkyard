@@ -39,7 +39,7 @@ services:
       # docker compose will refuse to start if this variable is unset or empty.
       ADMIN_TOKEN: ${ADMIN_TOKEN:?ADMIN_TOKEN must be set (run: export ADMIN_TOKEN=$(openssl rand -hex 32))}
 
-      # Set to chrome-extension://<your-extension-id> after publishing to Chrome Web Store
+      # Pin to your extension's ID before go-live — find it on chrome://extensions after loading unpacked.
       # Example: chrome-extension://abcdefghijklmnopabcdefghijklmnop
       CORS_ORIGIN_REGEX: "chrome-extension://[a-p]{32}"
 

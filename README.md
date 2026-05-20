@@ -69,12 +69,13 @@ All runtime configuration is set via environment variables in `.env`. The values
 | Variable             | Default                        | Description                                                                                    |
 |----------------------|--------------------------------|------------------------------------------------------------------------------------------------|
 | `ADMIN_TOKEN`        | *(empty)*                      | Bearer token for `/settings` endpoints. Generate with `openssl rand -hex 32` before go-live.  |
-| `CORS_ORIGIN_REGEX`  | `chrome-extension://[a-p]{32}` | Regex matched against the `Origin` header. Pin to your published extension ID before go-live.  |
+| `CORS_ORIGIN_REGEX`  | `chrome-extension://[a-p]{32}` | Regex matched against the `Origin` header. Pin to your extension's ID before go-live (find it on `chrome://extensions` after loading unpacked). |
 | `EMBEDDING_PROVIDER` | `local`                        | `local` (sentence-transformers) or `openai`.                                                   |
 | `EMBEDDING_DIM`      | `384`                          | Must match the model output dimension. `local` = 384, OpenAI `text-embedding-3-small` = 1536.  |
 
-> Before publishing the extension to the Chrome Web Store, set `CORS_ORIGIN_REGEX` to
+> Before exposing the backend publicly, set `CORS_ORIGIN_REGEX` to
 > `chrome-extension://<your-exact-extension-id>` to prevent other extensions from calling your backend.
+> Your extension ID is shown on `chrome://extensions` after loading unpacked.
 
 ---
 
