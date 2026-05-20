@@ -31,6 +31,10 @@ extension/src/     MV3 extension (background, content, popup)
 - Extension: no bundler yet — plain ES modules.
 - Embeddings: service layer abstracts the provider so we can swap local ↔ OpenAI.
 
+## Git
+- **Never run `git commit` or `git push` — the user does all commits and pushes manually.**
+- When changes are ready to commit, provide a single suggested commit message in the format used by recent commits: `type: short imperative description`. One line, no body, no co-author trailer. Allowed types: `feat`, `fix`, `misc`, `security`, `docs`, `refactor`.
+
 ## Status
 Base scaffold only. Business logic is being divided across subagents — see `docs/ARCHITECTURE.md` for the target design.
 
