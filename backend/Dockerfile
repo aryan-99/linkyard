@@ -21,14 +21,16 @@ RUN apt-get update \
 # ── python dependencies ───────────────────────────────────────────────────────
 WORKDIR /app
 
-COPY requirements.txt ./
+COPY backend/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 # ── application source ────────────────────────────────────────────────────────
-COPY app/ ./app/
+COPY backend/app/ ./app/
+COPY backend/alembic.ini ./
+COPY backend/alembic/ ./alembic/
 
 # ── egress firewall script ────────────────────────────────────────────────────
-COPY ../scripts/block_egress_private.sh /usr/local/bin/block_egress_private.sh
+COPY scripts/block_egress_private.sh /usr/local/bin/block_egress_private.sh
 RUN chmod +x /usr/local/bin/block_egress_private.sh
 
 # ── runtime ───────────────────────────────────────────────────────────────────
@@ -39,4 +41,22 @@ EXPOSE 8000
 # should then exec as an unprivileged user via `gosu app uvicorn ...`.
 # Until gosu is added, the process runs as root inside the container.
 # CAP_NET_ADMIN is scoped in compose (cap_add) so blast radius is limited.
-CMD ["/bin/sh", "-c", "/usr/local/bin/block_egress_private.sh && exec uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+# EGRESS_FIREWALL controls whether block_egress_private.sh runs at startup.
+#
+#   EGRESS_FIREWALL=true  (default / docker-compose.prod.yml path)
+#     Runs iptables rules before uvicorn.  Requires CAP_NET_ADMIN on the host.
+#     docker-compose.prod.yml already sets `cap_add: NET_ADMIN`.
+#
+#   EGRESS_FIREWALL=false (Fly.io path)
+#     Skips iptables entirely — Fly Machines do not grant CAP_NET_ADMIN so
+#     the script would abort with "Operation not permitted".
+#     Application-level SSRF guards (IP blocklist + redirect hook in
+#     backend/app/services/fetch.py) remain active as the primary defence.
+#     See docs/DEPLOY.md §CAP_NET_ADMIN note for full rationale.
+#
+# Default is "true" so existing docker-compose.prod.yml behaviour is unchanged.
+ENV EGRESS_FIREWALL=true
+
+CMD ["/bin/sh", "-c", \
+  "if [ \"$EGRESS_FIREWALL\" = \"true\" ]; then /usr/local/bin/block_egress_private.sh; fi \
+   && exec uvicorn app.main:app --host 0.0.0.0 --port 8000"]

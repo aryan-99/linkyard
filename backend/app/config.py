@@ -33,6 +33,10 @@ class Settings(BaseSettings):
     # Set ADMIN_TOKEN=<secret> in .env to require Bearer auth on /settings routes.
     admin_token: str | None = None
 
+    # Demo seed: when True, insert pre-fetched demo links at startup (no-op if
+    # the links table already has rows).  Default False — never affects dev envs.
+    demo_seed: bool = False
+
     @property
     def cors_origins(self) -> list[str]:
         return [o.strip() for o in self.cors_origins_raw.split(",") if o.strip()]

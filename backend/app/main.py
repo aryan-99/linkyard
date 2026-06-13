@@ -1,3 +1,6 @@
+import logging
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -5,7 +8,28 @@ from app.config import settings
 from app.routers import links
 from app.routers import settings as settings_router
 
-app = FastAPI(title="Linkyard", debug=settings.debug)
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    if settings.demo_seed:
+        try:
+            from app.db import SessionLocal
+            from app.deps import get_active_provider
+            from app.seed.load import seed_demo_links
+
+            async with SessionLocal() as session:
+                provider = await get_active_provider(session)
+                await seed_demo_links(session, provider)
+        except Exception:
+            logger.exception(
+                "demo seed failed — app will still serve requests normally"
+            )
+    yield
+
+
+app = FastAPI(title="Linkyard", debug=settings.debug, lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

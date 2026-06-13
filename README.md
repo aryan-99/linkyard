@@ -2,6 +2,23 @@
 
 Linkyard is a self-hosted semantic bookmarking app. Save URLs through a browser extension or the web UI, then search your collection by meaning — not just keywords. Links are embedded using a local sentence-transformer model (no external API required by default) and stored in Postgres with pgvector.
 
+| | | |
+|---|---|---|
+| ![Links](assets/screenshots/links.png) | ![Search](assets/screenshots/search.png) | ![Settings](assets/screenshots/settings.png) |
+| Links view | Semantic search | Settings |
+
+<p align="center">
+  <img src="assets/screenshots/extension.png" alt="Extension popup" width="320">
+</p>
+
+---
+
+## Live demo
+
+A hosted demo is deployable to Fly.io with one walkthrough — see [docs/DEPLOY.md](docs/DEPLOY.md). The backend boots with `DEMO_SEED=true` and pre-loads ~40 diverse links (programming, ML, design, philosophy, science) so semantic search returns meaningful results on first visit. Try queries like *"functional programming"*, *"how memory works"*, or *"design heuristics"*.
+
+To self-host the same demo locally, continue with [Quick start](#quick-start) below and set `DEMO_SEED=true` in `.env` before `make up`.
+
 ---
 
 ## Prerequisites
@@ -72,6 +89,7 @@ All runtime configuration is set via environment variables in `.env`. The values
 | `CORS_ORIGIN_REGEX`  | `chrome-extension://[a-p]{32}` | Regex matched against the `Origin` header. Pin to your extension's ID before go-live (find it on `chrome://extensions` after loading unpacked). |
 | `EMBEDDING_PROVIDER` | `local`                        | `local` (sentence-transformers) or `openai`.                                                   |
 | `EMBEDDING_DIM`      | `384`                          | Must match the model output dimension. `local` = 384, OpenAI `text-embedding-3-small` = 1536.  |
+| `DEMO_SEED`          | `false`                        | When `true`, the backend pre-loads ~40 example links on first boot if the database is empty. Safe to leave on; the loader no-ops once links exist. |
 
 > Before exposing the backend publicly, set `CORS_ORIGIN_REGEX` to
 > `chrome-extension://<your-exact-extension-id>` to prevent other extensions from calling your backend.

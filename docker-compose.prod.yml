@@ -45,6 +45,10 @@ services:
 
       EMBEDDING_PROVIDER: local
       EMBEDDING_DIM: 384
+
+      # When true, pre-loads ~40 example links on first boot if the DB is empty.
+      # Idempotent (no-op once links exist). Default unset → false. Safe to leave on.
+      DEMO_SEED: ${DEMO_SEED:-false}
     restart: unless-stopped
 
 volumes:
