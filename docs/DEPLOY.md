@@ -186,17 +186,20 @@ fly info --app linkyard-frontend
 # Hostname will be something like: linkyard-frontend.fly.dev
 ```
 
-Update the backend's CORS env var so it accepts requests from the frontend:
+Update the backend's CORS env var so it accepts requests from **both** the
+hosted frontend and any load-unpacked extension install (load-unpacked IDs
+are derived from each user's directory path, so we use a wildcard rather
+than pinning a single ID — see CLAUDE notes for the trade-off):
 
 ```bash
 fly secrets set \
-  CORS_ORIGIN_REGEX="https://linkyard-frontend\\.fly\\.dev" \
+  CORS_ORIGIN_REGEX="https://linkyard-frontend\\.fly\\.dev|chrome-extension://[a-p]{32}" \
   --app linkyard-backend
 ```
 
-> The architect will supply the final pinned regex.  For the frontend-only
-> demo the value above is sufficient.  If you also want to allow the
-> load-unpacked extension, append `|chrome-extension://<id>` to the regex.
+> Replace `linkyard-frontend` if you used a different app name in step 9.
+> Starlette's CORS middleware uses `fullmatch`, so the two alternatives are
+> bounded — no anchors needed.
 
 Restart the backend to pick up the new env var:
 

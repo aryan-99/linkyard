@@ -24,9 +24,11 @@ primary_region = "iad"
   EMBEDDING_PROVIDER  = "local"
   EMBEDDING_DIM       = "384"
   DEMO_SEED           = "true"
-  # Set CORS_ORIGIN_REGEX to your frontend .fly.dev URL after frontend deploys.
-  # Example:  fly secrets set CORS_ORIGIN_REGEX="https://linkyard-frontend.fly.dev"
-  # Architect will supply the pinned value.
+  # Override at deploy time once the frontend URL is known. Combined regex
+  # accepts the hosted frontend AND any load-unpacked extension install
+  # (load-unpacked IDs are per-user-per-path, so we wildcard rather than pin):
+  #   fly secrets set CORS_ORIGIN_REGEX="https://linkyard-frontend\.fly\.dev|chrome-extension://[a-p]{32}"
+  # See docs/DEPLOY.md step 10.
   CORS_ORIGIN_REGEX   = "__PLACEHOLDER__"
   # EGRESS_FIREWALL=false because Fly Machines do not grant CAP_NET_ADMIN.
   # Application-level SSRF guards (IP blocklist + redirect hook) remain active.

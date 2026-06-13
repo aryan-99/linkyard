@@ -27,7 +27,7 @@ When the Log exceeds ~150 lines, summarize or delete older entries. Promote anyt
 - **Tests:** 27 unit tests — `tests/unit/test_ingest.py` + `tests/unit/test_fetch.py` (httpx via respx) + `tests/unit/test_seed_loader.py` (idempotency, source field, double-call); `suppress_page_fetch` autouse fixture guards all integration tests.
 - **Docs:** `HOW_IT_WORKS.md` (conceptual design), `DEPLOY.md` (Fly walkthrough). README has Screenshots row + Live demo section.
 - **Assets:** `assets/linkyard-icon.jpg` (source icon, AI-generated temp). `assets/screenshots/{extension,links,search,settings}.png` — surfaced in README.
-- **Next logical slice:** User runs `fly deploy` per `docs/DEPLOY.md` → captures live URL → fills `CORS_ORIGIN_REGEX` in `fly/backend/fly.toml` (or via `fly secrets set`) → drops the URL into README's Live demo section → `git tag v1.0.0 && git push --tags`. v1.1: OpenAI provider unlock (1536-dim migration + API key encryption). Footer portfolio link deferred until portfolio site is built.
+- **Next logical slice:** User runs `fly deploy` per `docs/DEPLOY.md` → captures live URL → sets `CORS_ORIGIN_REGEX="https://<frontend>\.fly\.dev|chrome-extension://[a-p]{32}"` via `fly secrets set` (combined wildcard — frontend pin + any load-unpacked extension; stable manifest `key` trick parked as v1.1+) → drops the URL into README's Live demo section → `git tag v1.0.0 && git push --tags`. v1.1: OpenAI provider unlock (1536-dim migration + API key encryption). Footer portfolio link deferred until portfolio site is built.
 
 ---
 
