@@ -47,12 +47,12 @@ EXPOSE 8000
 #     Runs iptables rules before uvicorn.  Requires CAP_NET_ADMIN on the host.
 #     docker-compose.prod.yml already sets `cap_add: NET_ADMIN`.
 #
-#   EGRESS_FIREWALL=false (Fly.io path)
-#     Skips iptables entirely — Fly Machines do not grant CAP_NET_ADMIN so
-#     the script would abort with "Operation not permitted".
-#     Application-level SSRF guards (IP blocklist + redirect hook in
-#     backend/app/services/fetch.py) remain active as the primary defence.
-#     See docs/DEPLOY.md §CAP_NET_ADMIN note for full rationale.
+#   EGRESS_FIREWALL=false (managed-platform path)
+#     Skips iptables entirely — for hosts that do not grant CAP_NET_ADMIN
+#     (most managed PaaS), where the script would abort with
+#     "Operation not permitted".  Application-level SSRF guards (IP blocklist
+#     + redirect hook in backend/app/services/fetch.py) remain active as the
+#     primary defence.
 #
 # Default is "true" so existing docker-compose.prod.yml behaviour is unchanged.
 ENV EGRESS_FIREWALL=true

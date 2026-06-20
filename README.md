@@ -15,7 +15,7 @@ Linkyard is a self-hosted semantic bookmarking app. Save URLs through a browser 
 
 ## Live demo
 
-A hosted demo is deployable to Fly.io with one walkthrough — see [docs/DEPLOY.md](docs/DEPLOY.md). The backend boots with `DEMO_SEED=true` and pre-loads ~40 diverse links (programming, ML, design, philosophy, science) so semantic search returns meaningful results on first visit. Try queries like *"functional programming"*, *"how memory works"*, or *"design heuristics"*.
+A hosted demo is on the way — the deploy guide and candidate free-hosting options live in [docs/DEPLOY.md](docs/DEPLOY.md). When booted with `DEMO_SEED=true`, the backend pre-loads ~40 diverse links (programming, ML, design, philosophy, science) so semantic search returns meaningful results on first visit. Try queries like *"functional programming"*, *"how memory works"*, or *"design heuristics"*.
 
 To self-host the same demo locally, continue with [Quick start](#quick-start) below and set `DEMO_SEED=true` in `.env` before `make up`.
 
