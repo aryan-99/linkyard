@@ -13,11 +13,11 @@ Linkyard is a self-hosted semantic bookmarking app. Save URLs through a browser 
 
 ---
 
-## Live demo
+## Try it with sample data
 
-A hosted demo is on the way — the deploy guide and candidate free-hosting options live in [docs/DEPLOY.md](docs/DEPLOY.md). When booted with `DEMO_SEED=true`, the backend pre-loads ~40 diverse links (programming, ML, design, philosophy, science) so semantic search returns meaningful results on first visit. Try queries like *"functional programming"*, *"how memory works"*, or *"design heuristics"*.
+Want searchable content from the first launch? Set `DEMO_SEED=true` in `.env` before `make up` and the backend pre-loads ~40 diverse links (programming, ML, design, philosophy, science) on first boot, so semantic search returns meaningful results immediately. Try queries like *"functional programming"*, *"how memory works"*, or *"design heuristics"*. The loader is idempotent — it no-ops once your database has any links — so it's safe to leave on.
 
-To self-host the same demo locally, continue with [Quick start](#quick-start) below and set `DEMO_SEED=true` in `.env` before `make up`.
+Continue with [Quick start](#quick-start) below to get going.
 
 ---
 
